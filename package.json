@@ -1,8 +1,25 @@
 {
   "name": "dsh-connect-hub",
-  "version": "1.0.0",
-  "private": true,
+  "version": "1.0.1",
   "description": "One sidebar page for every DeepSeek Harness connector: see which platforms are installed and switched on, install or toggle them, and read their credit balances and expiry dates side by side.",
+  "license": "MIT",
+  "author": "Felix <kaenfelix@gmail.com>",
+  "homepage": "https://github.com/KaenFelix/dsh-connect-hub#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KaenFelix/dsh-connect-hub.git"
+  },
+  "bugs": {
+    "url": "https://github.com/KaenFelix/dsh-connect-hub/issues"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "connector",
+    "credits",
+    "balance"
+  ],
   "type": "module",
   "exports": {
     ".": "./index.js",
@@ -18,6 +35,7 @@
     "locale/*.json",
     "icon.svg",
     "README.md",
+    "LICENSE",
     "docs/CONNECTORS.md",
     "lib/assets",
     "docs/screenshot-panel.jpg",

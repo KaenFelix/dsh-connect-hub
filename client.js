@@ -3242,9 +3242,13 @@ window.__ModuleLoader__.load({
 .cr-conn-body { display: flex; align-items: flex-start; min-height: 38px; }
 .cr-conn-hint { margin: 0; color: var(--cr-sub); font-size: 11px; line-height: 1.55; }
 .cr-conn-action { margin-left: auto; display: flex; align-items: center; gap: 6px; }
-/* Connector cards carry little text, so the grid's 2-column rhythm would leave
-   them mostly empty; let them shrink to their content and share the row. */
-.cr-grid { align-items: start; }
+/* One row, one height: whatever the row's tallest card needs, every card in it
+   takes, so the grid reads as a table instead of a ragged column. The extra
+   height lands above the foot, which stays pinned to the bottom edge
+   (`.cr-card-foot` carries margin-top: auto). Connector placeholders stretch
+   with the credit cards for the same reason: a short dashed box beside a tall
+   credit card is exactly the uneven row this rule removes. */
+.cr-grid { align-items: stretch; }
 .cr-card-switch { margin-left: auto; height: 23px; padding: 0 9px; font-size: 10.5px; }
 .cr-card-switch svg { opacity: .75; }
 .cr-src-repo {
