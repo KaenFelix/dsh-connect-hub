@@ -13,16 +13,21 @@ window.__ModuleLoader__.load({
        carried across once instead of being orphaned by the rename. */
     const LEGACY_STORAGE_KEY = 'dsh-credit-radar:v1';
     const LEGACY_AUTO_KEY = 'dsh-credit-radar:auto';
+    /* A focus-driven stale check waits at most this long, so switching windows
+       does not fire a sync on every visit; with a 5-second interval the timer
+       itself is a shorter wait anyway, so this bound rarely applies. */
     const AUTO_STALE_MS = 60 * 1000;
-    const AUTO_DEFAULT_MS = 5 * 60 * 1000;
+    const AUTO_DEFAULT_MS = 30 * 1000;
+    /* Seven choices, same count as before: the menu sizes itself from the
+       popup's remaining height, so adding options must not lengthen the list. */
     const AUTO_OPTIONS = [
+      5 * 1000,
+      10 * 1000,
       30 * 1000,
       60 * 1000,
       2 * 60 * 1000,
       3 * 60 * 1000,
-      5 * 60 * 1000,
-      10 * 60 * 1000,
-      30 * 60 * 1000
+      5 * 60 * 1000
     ];
 
     const ZH = {
@@ -648,9 +653,20 @@ window.__ModuleLoader__.load({
       }
     }
 
+    /* Intervals this list used to offer and no longer does. A stored choice is
+       carried to the nearest remaining option rather than the default: someone
+       who picked 30 minutes once wanted to poll rarely, and dropping them onto
+       the 30-second default would multiply their requests by sixty. */
+    const AUTO_RETIRED = new Map([
+      [10 * 60 * 1000, 5 * 60 * 1000],
+      [30 * 60 * 1000, 5 * 60 * 1000]
+    ]);
+
     function normalizeInterval(value) {
       const ms = Number(value);
-      return AUTO_OPTIONS.indexOf(ms) >= 0 ? ms : AUTO_DEFAULT_MS;
+      if (AUTO_OPTIONS.indexOf(ms) >= 0) return ms;
+      if (AUTO_RETIRED.has(ms)) return AUTO_RETIRED.get(ms);
+      return AUTO_DEFAULT_MS;
     }
 
     function intervalLabel(ms, t) {
@@ -721,7 +737,7 @@ window.__ModuleLoader__.load({
       if (staleOnly) {
         const last = storeSnapshot().lastSyncedAt || 0;
         if (now - last <= Math.min(settings.intervalMs, AUTO_STALE_MS)) return;
-      } else if (now - autoEngine.lastAttempt < Math.max(5000, Math.round(settings.intervalMs * 0.8))) {
+      } else if (now - autoEngine.lastAttempt < Math.max(1000, Math.round(settings.intervalMs * 0.8))) {
         return;
       }
       autoEngine.lastAttempt = now;

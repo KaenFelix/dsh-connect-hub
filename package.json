@@ -19,7 +19,9 @@
     "icon.svg",
     "README.md",
     "docs/CONNECTORS.md",
-    "lib/assets"
+    "lib/assets",
+    "docs/screenshot-panel.jpg",
+    "docs/screenshot-connector-states.jpg"
   ],
   "dsh": {
     "bundle": {
