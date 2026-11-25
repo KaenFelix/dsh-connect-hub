@@ -3244,8 +3244,8 @@ window.__ModuleLoader__.load({
 .cr-conn-action { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 /* One row, one height: whatever the row's tallest card needs, every card in it
    takes, so the grid reads as a table instead of a ragged column. The extra
-   height lands above the foot, which stays pinned to the bottom edge
-   (`.cr-card-foot` carries margin-top: auto). Connector placeholders stretch
+   height lands above the foot, which stays pinned to the bottom edge (the foot
+   rule below already carries margin-top: auto). Connector placeholders stretch
    with the credit cards for the same reason: a short dashed box beside a tall
    credit card is exactly the uneven row this rule removes. */
 .cr-grid { align-items: stretch; }

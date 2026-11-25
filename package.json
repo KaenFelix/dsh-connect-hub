@@ -1,6 +1,6 @@
 {
   "name": "dsh-connect-hub",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "One sidebar page for every DeepSeek Harness connector: see which platforms are installed and switched on, install or toggle them, and read their credit balances and expiry dates side by side.",
   "license": "MIT",
   "author": "Felix <kaenfelix@gmail.com>",
@@ -54,5 +54,8 @@
         "@deepseek-ai/dsh-client-ui-slots"
       ]
     }
+  },
+  "scripts": {
+    "smoke": "node scripts/smoke-load.mjs"
   }
 }
