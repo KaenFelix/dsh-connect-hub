@@ -12,22 +12,19 @@
   </defs>
   <rect width="64" height="64" rx="16" fill="url(#bg)"/>
   <circle cx="53" cy="11" r="14" fill="#FFFFFF" opacity=".09"/>
-  <!-- Links first, so the nodes sit on top of them like real sockets. -->
-  <g fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".55">
-    <path d="M32 32L17 19"/>
-    <path d="M32 32L47 19"/>
-    <path d="M32 32L17 45"/>
-    <path d="M32 32L47 45"/>
+  <!-- Same mark as the in-app glyph: spokes stopping at the node edges, four
+       satellites, one filled hub in the middle. -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="3.1" stroke-linecap="round" opacity=".7">
+    <path d="M22.4 22.4L28 28"/>
+    <path d="M41.6 22.4L36 28"/>
+    <path d="M22.4 41.6L28 36"/>
+    <path d="M41.6 41.6L36 36"/>
   </g>
-  <!-- The hub the connectors report into. -->
-  <circle cx="32" cy="32" r="10.5" fill="url(#hub)"/>
-  <circle cx="32" cy="32" r="4.2" fill="#5B6CFF"/>
-  <!-- Four platforms around it; two filled, two hollow, so the set reads as
-       growing rather than fixed at four. -->
-  <g stroke="#FFFFFF" stroke-width="2.2">
-    <circle cx="16.5" cy="18.5" r="4.6" fill="#7C86FF"/>
-    <circle cx="47.5" cy="18.5" r="4.6" fill="#7C86FF"/>
-    <circle cx="16.5" cy="45.5" r="4.6" fill="none" opacity=".82"/>
-    <circle cx="47.5" cy="45.5" r="4.6" fill="none" opacity=".82"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="3.1">
+    <circle cx="19" cy="19" r="5.4"/>
+    <circle cx="45" cy="19" r="5.4"/>
+    <circle cx="19" cy="45" r="5.4"/>
+    <circle cx="45" cy="45" r="5.4"/>
   </g>
+  <circle cx="32" cy="32" r="9.2" fill="url(#hub)"/>
 </svg>

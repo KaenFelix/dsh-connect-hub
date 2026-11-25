@@ -21,7 +21,8 @@
     "docs/CONNECTORS.md",
     "lib/assets",
     "docs/screenshot-panel.jpg",
-    "docs/screenshot-connector-states.jpg"
+    "docs/screenshot-connector-states.jpg",
+    "docs/screenshot-composer.jpg"
   ],
   "dsh": {
     "bundle": {

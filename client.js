@@ -1478,12 +1478,24 @@ window.__ModuleLoader__.load({
       }, props.children);
     }
 
+    /* The connector-hub mark: one centre that platforms report into, four
+       around it. This replaced a radar sweep when the panel stopped being a
+       credit radar and became the place connectors are managed.
+ 
+       Spokes run between the circles' edges rather than under them, so the
+       glyph stays open at 14–16px, where a full line through an unfilled node
+       would read as a blob. */
     function IconRadar(props) {
       return h(Svg, { size: props.size || 16, className: props.className }, [
-        h('circle', { key: 'a', cx: 10, cy: 10, r: 7.2, opacity: 0.9 }),
-        h('circle', { key: 'b', cx: 10, cy: 10, r: 3.6, opacity: 0.45 }),
-        h('path', { key: 'c', d: 'M10 10l5.1-4.4' }),
-        h('circle', { key: 'd', cx: 15.1, cy: 5.6, r: 1.2, fill: 'currentColor', stroke: 'none' })
+        h('path', { key: 's1', d: 'M5.5 5.5L7.9 7.9' }),
+        h('path', { key: 's2', d: 'M14.5 5.5L12.1 7.9' }),
+        h('path', { key: 's3', d: 'M5.5 14.5L7.9 12.1' }),
+        h('path', { key: 's4', d: 'M14.5 14.5L12.1 12.1' }),
+        h('circle', { key: 'n1', cx: 4.4, cy: 4.4, r: 1.7 }),
+        h('circle', { key: 'n2', cx: 15.6, cy: 4.4, r: 1.7 }),
+        h('circle', { key: 'n3', cx: 4.4, cy: 15.6, r: 1.7 }),
+        h('circle', { key: 'n4', cx: 15.6, cy: 15.6, r: 1.7 }),
+        h('circle', { key: 'hub', cx: 10, cy: 10, r: 3.1, fill: 'currentColor', stroke: 'none' })
       ]);
     }
 
@@ -1583,10 +1595,15 @@ window.__ModuleLoader__.load({
         focusable: 'false',
         style: { display: 'block', opacity: props.active ? 1 : 0.82 }
       }, [
-        h('rect', { key: 'a', x: 2.2, y: 4.3, width: 15.6, height: 11.4, rx: 2.6, stroke: 'currentColor', strokeWidth: 1.55 }),
-        h('path', { key: 'b', d: 'M2.6 8.1h14.8', stroke: 'currentColor', strokeWidth: 1.2, opacity: 0.55 }),
-        h('circle', { key: 'c', cx: 14.1, cy: 12, r: 2.6, fill: 'var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #1b1c20))', stroke: 'currentColor', strokeWidth: 1.4 }),
-        h('path', { key: 'd', d: 'M14.1 10.7v1.4l1 .6', stroke: 'currentColor', strokeWidth: 1.15 })
+        h('path', { key: 's1', d: 'M5.5 5.5L7.9 7.9', stroke: 'currentColor', strokeWidth: 1.25 }),
+        h('path', { key: 's2', d: 'M14.5 5.5L12.1 7.9', stroke: 'currentColor', strokeWidth: 1.25 }),
+        h('path', { key: 's3', d: 'M5.5 14.5L7.9 12.1', stroke: 'currentColor', strokeWidth: 1.25 }),
+        h('path', { key: 's4', d: 'M14.5 14.5L12.1 12.1', stroke: 'currentColor', strokeWidth: 1.25 }),
+        h('circle', { key: 'n1', cx: 4.4, cy: 4.4, r: 1.7, stroke: 'currentColor', strokeWidth: 1.25 }),
+        h('circle', { key: 'n2', cx: 15.6, cy: 4.4, r: 1.7, stroke: 'currentColor', strokeWidth: 1.25 }),
+        h('circle', { key: 'n3', cx: 4.4, cy: 15.6, r: 1.7, stroke: 'currentColor', strokeWidth: 1.25 }),
+        h('circle', { key: 'n4', cx: 15.6, cy: 15.6, r: 1.7, stroke: 'currentColor', strokeWidth: 1.25 }),
+        h('circle', { key: 'hub', cx: 10, cy: 10, r: 3.1, fill: 'currentColor', stroke: 'none' })
       ]);
     }
 
