@@ -1,13 +1,18 @@
 window.__ModuleLoader__.load({
-  id: 'dsh-credit-radar',
+  id: 'dsh-connect-hub',
   factory(require) {
     const React = require('react');
     const ReactDOM = require('react-dom');
     const h = React.createElement;
-    const NS = 'dsh-credit-radar';
-    const PANEL_ID = 'credit-radar';
-    const STORAGE_KEY = 'dsh-credit-radar:v1';
-    const AUTO_KEY = 'dsh-credit-radar:auto';
+    const NS = 'dsh-connect-hub';
+    const PANEL_ID = 'connect-hub';
+    const STORAGE_KEY = 'dsh-connect-hub:v1';
+    const AUTO_KEY = 'dsh-connect-hub:auto';
+    /* The panel used to be called dsh-credit-radar. Its stored records and
+       auto-refresh settings are the user's data, not the package's, so they are
+       carried across once instead of being orphaned by the rename. */
+    const LEGACY_STORAGE_KEY = 'dsh-credit-radar:v1';
+    const LEGACY_AUTO_KEY = 'dsh-credit-radar:auto';
     const AUTO_STALE_MS = 60 * 1000;
     const AUTO_DEFAULT_MS = 5 * 60 * 1000;
     const AUTO_OPTIONS = [
@@ -21,10 +26,10 @@ window.__ModuleLoader__.load({
     ];
 
     const ZH = {
-      panelLabel: '额度雷达',
-      title: '额度雷达',
-      eyebrow: '订阅与积分',
-      subtitle: '把每个订阅的积分和到期日放在一起，先花快过期的。',
+      panelLabel: '连接中心',
+      title: '连接中心',
+      eyebrow: '连接器与额度',
+      subtitle: '集中查看和管理已接入的平台：安装、启用、看额度与到期日，都在这一个页面。',
       sync: '同步连接器',
       syncing: '同步中…',
       back: '返回会话',
@@ -44,7 +49,6 @@ window.__ModuleLoader__.load({
       syncNoAccounts: '连接器已响应，但没有读取到可用的积分数据（可能尚未登录）。',
       syncSourceIdle: '{sources} 已响应但没有账号（可能未登录）。',
       syncAllOff: '以下连接器已关闭或未安装，本次没有读取：{sources}。',
-      hiddenSources: '{sources} 已关闭，相关卡片已隐藏（记录仍保留，重新开启后恢复）。',
       syncFailed: '同步失败，请稍后再试。',
       listSep: '、',
       sourceTrae: 'Trae',
@@ -84,10 +88,10 @@ window.__ModuleLoader__.load({
       emptyFiltered: '没有符合条件的订阅',
       emptyFilteredDesc: '换个筛选条件或搜索词试试。',
       clearFilters: '清除筛选',
-      popPill: '额度雷达',
-      popPillTitle: '查看额度雷达',
-      popPillTitleSoon: '{n} 个订阅快到期，查看额度雷达',
-      popEmpty: '还没有订阅，先在额度雷达里添加或同步连接器。',
+      popPill: '连接中心',
+      popPillTitle: '查看连接中心',
+      popPillTitleSoon: '{n} 个订阅快到期，查看连接中心',
+      popEmpty: '还没有订阅，先在连接中心里同步连接器。',
       popRefresh: '刷新额度',
       popOpen: '打开面板',
       noAccount: '未填写账号',
@@ -112,17 +116,28 @@ window.__ModuleLoader__.load({
       untilExpiry: '距离到期',
       legacyManual: '旧手动记录（只读）',
       synced: '连接器同步',
-      sourceListTitle: '支持的连接器',
-      sourceListSub: '未安装的点「安装」即可接入；已安装的直接同步额度。',
       sourceReady: '已接入',
       sourceOff: '已关闭',
       sourceFailed: '启动失败',
       sourceAbsent: '未安装',
-      sourceSynced: '正在同步',
-      sourceTurnOn: '去开启',
+      sourceRetryStart: '重试启动',
+      sourceEnabling: '开启中…',
+      sourceEnable: '启用',
+      sourceDisable: '禁用',
+      sourceDisableHint: '关闭 {service}，已同步的记录会保留',
+      sourceDisabled: '{package} 已关闭，记录会保留。',
+      connInstalledHint: '已安装但当前是关闭状态，点「启用」即可接入额度。',
+      connAbsentHint: '还没有安装，点「安装」由插件管理器装好后自动同步。',
+      connFailedHint: '已安装且已开启，但这次没起来。先「重试启动」，仍不行就去插件页看报错。',
+      connInstalledOrigin: '已安装',
+      connAbsentOrigin: '未安装',
+      connIdleHint: '连接器已就绪，但这次同步没有读到账号（可能还没登录）。',
+      connIdleOrigin: '已接入',
       sourceInstall: '安装',
       sourceInstalling: '安装中…',
       sourceInstalled: '已安装 {package}，积分会随下次同步出现。',
+      sourceEnabled: '{package} 已开启，积分会随下次同步出现。',
+      sourceAlreadyOn: '{package} 已经是开启状态，无需重复操作。',
       sourceRestart: '已安装 {package}，但需要重启 DeepSeek Harness 才会生效。',
       sourceNoManager: '当前环境不允许安装插件（没有插件管理服务），请在「插件」页手动安装。',
       sourceUnknown: '这个连接器不在支持列表里。',
@@ -132,10 +147,10 @@ window.__ModuleLoader__.load({
     };
 
     const EN = {
-      panelLabel: 'Credit radar',
-      title: 'Credit radar',
+      panelLabel: 'Connections',
+      title: 'Connections',
       eyebrow: 'Subscriptions & credits',
-      subtitle: 'Every balance and expiry in one place, so the soonest-expiring credits get spent first.',
+      subtitle: 'Every connected platform in one place: install, switch on, and read each balance and expiry date.',
       sync: 'Sync connectors',
       syncing: 'Syncing…',
       back: 'Back to chat',
@@ -155,7 +170,6 @@ window.__ModuleLoader__.load({
       syncNoAccounts: 'The connectors responded, but no usable credit data was available. They may be signed out.',
       syncSourceIdle: '{sources} responded but has no account (it may be signed out).',
       syncAllOff: 'These connectors are switched off or not installed, so nothing was read: {sources}.',
-      hiddenSources: '{sources} is switched off, so those cards are hidden (records are kept and return when it is back on).',
       syncFailed: 'Sync failed. Try again later.',
       listSep: ', ',
       sourceTrae: 'Trae',
@@ -196,7 +210,7 @@ window.__ModuleLoader__.load({
       emptyFilteredDesc: 'Try another filter or search term.',
       clearFilters: 'Clear filters',
       popPill: 'Credits',
-      popPillTitle: 'Open credit radar',
+      popPillTitle: 'Open connections',
       popPillTitleSoon: '{n} subscriptions expiring soon',
       popEmpty: 'No subscriptions yet. Add one or sync the connectors.',
       popRefresh: 'Refresh',
@@ -223,17 +237,28 @@ window.__ModuleLoader__.load({
       untilExpiry: 'until expiry',
       legacyManual: 'Legacy manual entry (read-only)',
       synced: 'Synced',
-      sourceListTitle: 'Supported connectors',
-      sourceListSub: 'Install a missing one to start reading its credits; installed ones sync straight away.',
       sourceReady: 'Connected',
-      sourceOff: 'Switched off',
+      sourceOff: 'Off',
       sourceFailed: 'Failed to start',
       sourceAbsent: 'Not installed',
-      sourceSynced: 'Syncing',
-      sourceTurnOn: 'Turn on',
+      sourceRetryStart: 'Retry start',
+      sourceEnabling: 'Switching on…',
+      sourceEnable: 'Enable',
+      sourceDisable: 'Disable',
+      sourceDisableHint: 'Turn off {service}; synced records are kept',
+      sourceDisabled: '{package} is switched off; its records are kept.',
+      connInstalledHint: 'Installed but currently switched off. Enable it to read its credits.',
+      connAbsentHint: 'Not installed yet. Install it here and its credits sync automatically.',
+      connFailedHint: 'Installed and enabled, but it did not start this time. Retry, then check Plugins for the error.',
+      connInstalledOrigin: 'Installed',
+      connAbsentOrigin: 'Not installed',
+      connIdleHint: 'The connector is ready, but the last sync found no accounts (it may be signed out).',
+      connIdleOrigin: 'Connected',
       sourceInstall: 'Install',
       sourceInstalling: 'Installing…',
       sourceInstalled: '{package} installed; its credits appear on the next sync.',
+      sourceEnabled: '{package} is switched on; its credits appear on the next sync.',
+      sourceAlreadyOn: '{package} is already switched on; nothing to do.',
       sourceRestart: '{package} is installed but takes effect after DeepSeek Harness restarts.',
       sourceNoManager: 'This environment cannot install plugins (no plugin manager service). Install it from Plugins instead.',
       sourceUnknown: 'That connector is not in the supported list.',
@@ -441,6 +466,83 @@ window.__ModuleLoader__.load({
       return t('lotNote', { credits: formatNum(lot.credits), when: when });
     }
 
+    /* Brand marks, shipped as PNGs in this package's `lib/assets/brand/`.
+
+       They are downloaded copies, not hotlinks: the page must render them with
+       no network access, and a brand site rearranging its assets must not blank
+       a tile.
+
+       Why not reuse the connector packages' own `icons/*.png`: trae, workbuddy
+       and qoder all ship the SAME placeholder image (identical SHA-256), madao
+       ships a 「码」 glyph and meoo ships none — reusing them would put one logo
+       on five different platforms. Each file below was taken from the brand's
+       own published favicon or logo and squared to 128px:
+
+         trae       www.trae.ai favicon           (its dark plate + neon mark)
+         workbuddy  www.workbuddy.ai logo.svg     (rasterized)
+         meoo       meoo.com favicon              (alicdn, 184px)
+         madao      codearts.huaweicloud.com      (the CodeArts brand mark)
+         qoder      www.qoder.com favIcon.svg     (rasterized)
+
+       The revision in each file name is the content hash, matching the
+       framework's `./assets/*` convention: a changed file gets a new URL, so a
+       stale cache can never show the wrong logo. `sources.md` beside the images
+       records what each file came from. */
+    const BRAND_ASSETS = {
+      trae: 'trae-35d7c9b8eb9b.png',
+      workbuddy: 'workbuddy-c398bbf5f99a.png',
+      meoo: 'meoo-445128ff6dcb.png',
+      madao: 'madao-76880438ca99.png',
+      qoder: 'qoder-dcdea0167b20.png'
+    };
+
+    /* Document-relative, like every other app-owned route: the reference
+       resolves under any mount point instead of assuming the site root. */
+    function brandAssetUrl(file) {
+      return 'plugins/dsh-connect-hub/assets/brand/' + file;
+    }
+
+    /* Which brand a service belongs to. Matched on the names the connectors
+       write, including the Chinese label, so a renamed account still lands on
+       the right tile. */
+    function brandKeyOf(service) {
+      const name = String(service || '').trim();
+      if (name === '') return null;
+      const lower = name.toLowerCase();
+      if (lower.indexOf('trae') >= 0) return 'trae';
+      if (lower.indexOf('workbuddy') >= 0 || lower.indexOf('work buddy') >= 0) return 'workbuddy';
+      if (lower.indexOf('meoo') >= 0 || name.indexOf('秒悟') >= 0) return 'meoo';
+      if (name.indexOf('码道') >= 0 || lower.indexOf('codearts') >= 0 || lower.indexOf('madao') >= 0) return 'madao';
+      if (lower.indexOf('qoder') >= 0) return 'qoder';
+      return null;
+    }
+
+    /* The tile at the head of every card: the platform's mark when we know it,
+       its initials otherwise.
+ 
+       `sourceKey` is the reliable answer — a synced entry carries the connector
+       it came from — while the service name is free text a user could have
+       renamed. Name matching is the fallback for a legacy manual entry, which
+       has no source key at all. */
+    function BrandTile(props) {
+      const key = props.sourceKey && Object.hasOwn(BRAND_ASSETS, props.sourceKey)
+        ? props.sourceKey
+        : brandKeyOf(props.service);
+      if (key === null) return h('div', { className: 'cr-tile' }, initials(props.service));
+      return h('div', { className: 'cr-tile cr-tile-brand', title: props.service },
+        h('img', {
+          className: 'cr-tile-img',
+          src: brandAssetUrl(BRAND_ASSETS[key]),
+          alt: '',
+          width: 34,
+          height: 34,
+          /* Not lazy: the tile sits at the top of a card that is already on
+             screen, and these files are 5–33 KB each. */
+          decoding: 'async',
+          draggable: 'false'
+        }));
+    }
+
     function initials(service) {
       const name = String(service || '').trim();
       if (name === '') return '?';
@@ -496,9 +598,30 @@ window.__ModuleLoader__.load({
       };
     }
 
+    /* One-time carry-over of a value stored under the panel's old name. The
+       legacy key is read only when the new one is absent, and the value is then
+       written under the new key: a later write by the new version must win, so
+       this can never resurrect old data over fresh data. */
+    function adoptLegacy(legacyKey, key) {
+      try {
+        const legacy = window.localStorage.getItem(legacyKey);
+        if (legacy === null) return;
+        if (window.localStorage.getItem(key) === null) {
+          window.localStorage.setItem(key, legacy);
+        }
+        window.localStorage.removeItem(legacyKey);
+      } catch (error) {
+        /* Storage unavailable: the old value simply stays where it is. */
+      }
+    }
+
     function readStore() {
       try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
+        let raw = window.localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          adoptLegacy(LEGACY_STORAGE_KEY, STORAGE_KEY);
+          raw = window.localStorage.getItem(STORAGE_KEY);
+        }
         if (!raw) return { entries: [], lastSyncedAt: null };
         const parsed = JSON.parse(raw);
         const entries = Array.isArray(parsed && parsed.entries)
@@ -537,6 +660,7 @@ window.__ModuleLoader__.load({
 
     function readAuto() {
       try {
+        adoptLegacy(LEGACY_AUTO_KEY, AUTO_KEY);
         const raw = window.localStorage.getItem(AUTO_KEY);
         if (!raw) return { enabled: true, intervalMs: AUTO_DEFAULT_MS };
         const parsed = JSON.parse(raw);
@@ -1073,12 +1197,17 @@ window.__ModuleLoader__.load({
       return out;
     }
 
-    /* Which connectors the Host says are installed and switched on.
-       `null` means "the Host did not answer" — an older Host, a non-Desktop
-       surface, or a failed read. That is NOT the same as "all off", so it
-       falls back to trying every source exactly as before; hiding sources on
-       an unknown answer would silently drop a user's accounts. */
-    const INSTALL_ROUTE = '/plugins/dsh-credit-radar/install';
+    /* Which connectors the Host says are installed and switched on, and which
+       of those actually mounted. `installed` and `enabled` are separate answers
+       on purpose: a profile dependency that is installed but not selected has
+       no Loader row at all, and reporting that as "not installed" is what made
+       the panel offer "install" for a package already on disk.
+       `map: null` means "the Host did not answer" — an older Host, a
+       non-Desktop surface, or a failed read. That is NOT the same as "all off",
+       so it falls back to trying every source exactly as before; hiding sources
+       on an unknown answer would silently drop a user's accounts. */
+    const INSTALL_ROUTE = '/plugins/dsh-connect-hub/install';
+    const SWITCH_ROUTE = '/plugins/dsh-connect-hub/enable';
     let sourceState = { known: false, map: null };
     let sourceStateAt = 0;
     const SOURCE_STATE_TTL_MS = 10 * 1000;
@@ -1162,7 +1291,7 @@ window.__ModuleLoader__.load({
     async function loadSourceState() {
       const now = Date.now();
       if (sourceState.map && now - sourceStateAt < SOURCE_STATE_TTL_MS) return sourceState;
-      const data = await getJson('/plugins/dsh-credit-radar/connectors', 5000);
+      const data = await getJson('/plugins/dsh-connect-hub/connectors', 5000);
       if (!data || data.known !== true || !Array.isArray(data.connectors)) {
         sourceState = { known: false, map: null };
         sourceStateAt = now;
@@ -1177,12 +1306,6 @@ window.__ModuleLoader__.load({
       return sourceState;
     }
 
-    /* Display name for a source that is installed but not switched on. */
-    function sourceLabel(t, key) {
-      const source = SYNC_SOURCES.find(function (item) { return item.key === key; });
-      return t(source ? source.labelKey : key);
-    }
-
     /* What each source is, for the source list. Kept beside SOURCE_SERVICE so
        the panel can name a connector it has never synced with. */
     const SOURCE_INFO = {
@@ -1193,18 +1316,22 @@ window.__ModuleLoader__.load({
       qoder: { service: 'Qoder', repo: 'https://github.com/dingminhua/dsh-connect-qoder' }
     };
 
-    /* Ask the Host to install one connector. The Host owns the package names;
-       this only ever sends a key, so a mistake here cannot install anything
-       outside the five known connectors. */
-    async function installSource(key) {
+    /* Ask the Host to change one connector. The Host owns the package names;
+       this only ever sends a key, so a mistake here cannot install or enable
+       anything outside the five known connectors.
+
+       `route` is the install route or the enable route; an enable is a profile
+       selection and returns in well under a second, while an install runs pnpm
+       and gets the long bound. */
+    async function changeSource(route, key, timeoutMs, extra) {
       const controller = new AbortController();
-      const timer = window.setTimeout(function () { controller.abort(); }, 120000);
+      const timer = window.setTimeout(function () { controller.abort(); }, timeoutMs);
       try {
-        const response = await fetch(INSTALL_ROUTE, {
+        const response = await fetch(route, {
           method: 'POST',
           signal: controller.signal,
           headers: { 'content-type': 'application/json', accept: 'application/json' },
-          body: JSON.stringify({ key: key })
+          body: JSON.stringify(Object.assign({ key: key }, extra || {}))
         });
         if (!response.ok) return { ok: false, state: 'failed', code: 'http-' + response.status };
         return await response.json();
@@ -1213,6 +1340,17 @@ window.__ModuleLoader__.load({
       } finally {
         window.clearTimeout(timer);
       }
+    }
+
+    function installSource(key) {
+      return changeSource(INSTALL_ROUTE, key, 120000);
+    }
+
+    /* Switch an installed connector on or off. Neither direction touches
+       packages, so both are safe to retry and need no progress wording beyond
+       "开启中…" / "关闭中…". */
+    function enableSource(key, enabled) {
+      return changeSource(SWITCH_ROUTE, key, 30000, { enabled: enabled });
     }
 
     const SYNC_SOURCES = [
@@ -1349,6 +1487,15 @@ window.__ModuleLoader__.load({
       ]);
     }
 
+    /* Power glyph: the switch-on action, as opposed to the "+" that adds a
+       package. */
+    function IconPower(props) {
+      return h(Svg, { size: props.size || 16 }, [
+        h('path', { key: 'a', d: 'M10 3.4v6.2' }),
+        h('path', { key: 'b', d: 'M5.6 5.9a6 6 0 1 0 8.8 0' })
+      ]);
+    }
+
     function IconSearch(props) {
       return h(Svg, { size: props.size || 16 }, [
         h('circle', { key: 'a', cx: 8.6, cy: 8.6, r: 4.7 }),
@@ -1482,20 +1629,44 @@ window.__ModuleLoader__.load({
       );
     }
 
-    /* One row of the source list: every connector the panel knows about, with
-       its live state and, when it is missing, the action that fixes that. */
-    function SourceRow(props) {
+    /* Is this connector one the panel cannot talk to right now? A source with
+       no Host answer is "unknown", never "off": hiding on an unknown would drop
+       a user's accounts, so that case stays usable. */
+    function connectorStateOf(states, key) {
+      const row = states && states.map ? states.map.get(key) : null;
+      return {
+        known: !!(states && states.map),
+        row: row,
+        installed: row ? row.installed === true : false,
+        enabled: row ? row.enabled === true : false,
+        available: row ? row.available === true : false
+      };
+    }
+
+    /* A connector the panel has nothing to show yet.
+ 
+       This is the whole replacement for the old "supported connectors" section:
+       a connector that is not installed, or is installed but switched off, gets
+       a card of its own in the same grid as the credit cards. One action per
+       state, and the action never claims to install something already on disk:
+ 
+         - not installed  → 安装 (adds the package and selects it);
+         - installed, off → 启用 (selects the existing bundle, no pnpm run);
+         - on but failed  → 重试启动 (re-selects and reloads its rows).
+ 
+       The last two also offer 禁用 once they are running, which is the switch
+       the Plugins page has and this panel previously could not reach. */
+    function ConnectorCard(props) {
       const t = props.t;
       const key = props.item.key;
       const info = SOURCE_INFO[key] || { service: key, repo: null };
-      const row = props.states && props.states.map ? props.states.map.get(key) : null;
-      /* With no Host answer every connector reads as "unknown": still sold as
-         installable, because the panel cannot prove it is present. */
-      const installed = row ? row.installed === true : false;
-      const enabled = row ? row.enabled === true : false;
-      const available = row ? row.available === true : false;
+      const state = props.state;
       const busy = props.busyKey === key;
+      const anyBusy = props.busyKey !== null && props.busyKey !== undefined;
       const outcome = props.outcomeKey === key ? props.outcome : null;
+      const installed = state.installed;
+      const enabled = state.enabled;
+      const available = state.available;
 
       let badge;
       let tone;
@@ -1515,81 +1686,82 @@ window.__ModuleLoader__.load({
         tone = 'idle';
       }
 
-      const action = available
-        ? h('span', { className: 'cr-src-note' }, t('sourceSynced'))
-        : installed
-          ? h('button', {
-              type: 'button',
-              className: 'cr-btn cr-btn-ghost cr-src-btn',
-              onClick: function () { props.onSync(); },
-              disabled: props.syncBusy
-            }, t('sourceTurnOn'))
-          : h('button', {
-              type: 'button',
-              className: 'cr-btn cr-btn-primary cr-src-btn',
-              onClick: function () { props.onInstall(key); },
-              disabled: busy || props.anyBusy
-            }, busy ? h(Spinner) : h(IconPlus, { size: 13 }), t(busy ? 'sourceInstalling' : 'sourceInstall'));
+      let action;
+      if (!installed) {
+        action = h('button', {
+          type: 'button',
+          className: 'cr-btn cr-btn-primary cr-src-btn',
+          onClick: function () { props.onInstall(key); },
+          disabled: busy || anyBusy
+        }, busy ? h(Spinner) : h(IconPlus, { size: 13 }), t(busy ? 'sourceInstalling' : 'sourceInstall'));
+      } else if (available) {
+        action = h('button', {
+          type: 'button',
+          className: 'cr-btn cr-btn-ghost cr-src-btn',
+          onClick: function () { props.onEnable(key, false); },
+          disabled: busy || anyBusy,
+          title: t('sourceDisableHint', { service: info.service })
+        }, busy ? h(Spinner) : h(IconPower, { size: 13 }), t('sourceDisable'));
+      } else {
+        action = h('button', {
+          type: 'button',
+          /* On but broken is a retry, not a switch: keep it quiet. */
+          className: 'cr-btn cr-src-btn ' + (enabled ? 'cr-btn-ghost' : 'cr-btn-primary'),
+          onClick: function () { props.onEnable(key, true); },
+          disabled: busy || anyBusy
+        }, busy ? h(Spinner) : h(IconPower, { size: 13 }),
+          t(busy ? 'sourceEnabling' : enabled ? 'sourceRetryStart' : 'sourceEnable'));
+      }
 
-      return h('div', { className: 'cr-src-row' },
-        h('div', { className: 'cr-tile cr-src-tile' }, initials(info.service)),
-        h('div', { className: 'cr-src-text' },
-          h('div', { className: 'cr-src-name' },
-            info.service,
-            h('span', { className: 'cr-src-badge cr-src-badge-' + tone }, badge)
+      return h('article', { className: 'cr-card cr-card-conn cr-tone-' + (tone === 'ok' ? 'brand' : tone) },
+        h('div', { className: 'cr-card-top' },
+          h('div', { className: 'cr-ident' },
+            h(BrandTile, { service: info.service, sourceKey: key }),
+            h('div', { className: 'cr-ident-text' },
+              h('div', { className: 'cr-service' }, info.service),
+              h('div', { className: 'cr-account' },
+                info.repo ? h('a', {
+                  className: 'cr-src-repo',
+                  href: info.repo,
+                  target: '_blank',
+                  rel: 'noreferrer noopener',
+                  title: info.repo
+                }, info.repo.replace(/^https:\/\/github\.com\//, '')) : null)
+            )
           ),
-          info.repo ? h('a', {
-            className: 'cr-src-repo',
-            href: info.repo,
-            target: '_blank',
-            rel: 'noreferrer noopener',
-            title: info.repo
-          }, info.repo.replace(/^https:\/\/github\.com\//, '')) : null,
-          outcome ? h('div', { className: 'cr-src-outcome cr-src-outcome-' + (outcome.ok ? 'ok' : 'error'), role: 'status' },
-            t(sourceOutcomeKey(outcome), { package: outcome.package || '', code: outcome.code || '', version: outcome.version || '' })
-          ) : null
+          h('span', { className: 'cr-badge' }, badge)
         ),
-        action
+        h('div', { className: 'cr-conn-body' },
+          outcome
+            ? h('div', { className: 'cr-src-outcome cr-src-outcome-' + (outcome.ok ? 'ok' : 'error'), role: 'status' },
+                t(sourceOutcomeKey(outcome, props.outcomeKind), { package: outcome.package || '', code: outcome.code || '', version: outcome.version || '' }))
+            : h('p', { className: 'cr-conn-hint' }, t(
+                !installed ? 'connAbsentHint'
+                  : available ? 'connIdleHint'
+                    : enabled ? 'connFailedHint' : 'connInstalledHint',
+                { service: info.service }))
+        ),
+        h('div', { className: 'cr-card-foot' },
+          h('span', { className: 'cr-origin' },
+            h('i', { className: 'cr-origin-dot', 'aria-hidden': 'true' }),
+            t(!installed ? 'connAbsentOrigin' : available ? 'connIdleOrigin' : 'connInstalledOrigin')),
+          h('div', { className: 'cr-conn-action' }, action)
+        )
       );
     }
 
-    /* Map an install outcome to the sentence that explains it. */
-    function sourceOutcomeKey(outcome) {
-      if (!outcome) return 'sourceInstalled';
-      if (outcome.ok) return 'sourceInstalled';
+    /* Map a connector change outcome to the sentence that explains it.
+       `kind` only picks the success wording; every failure sentence is shared. */
+    function sourceOutcomeKey(outcome, kind) {
+      if (!outcome) return kind === 'enable' ? 'sourceEnabled' : kind === 'disable' ? 'sourceDisabled' : 'sourceInstalled';
+      if (outcome.ok) return kind === 'enable' ? 'sourceEnabled' : kind === 'disable' ? 'sourceDisabled' : 'sourceInstalled';
       if (outcome.state === 'restart-required') return 'sourceRestart';
       if (outcome.state === 'unavailable' || outcome.code === 'management-required') return 'sourceNoManager';
       if (outcome.code === 'unknown-connector') return 'sourceUnknown';
       if (outcome.code === 'incompatible-version') return 'sourceIncompatible';
       if (outcome.code === 'timeout' || outcome.code === 'network') return 'sourceNetwork';
+      if (outcome.code === 'already-installed') return 'sourceAlreadyOn';
       return 'sourceInstallFailed';
-    }
-
-    function SourceList(props) {
-      const t = props.t;
-      const items = SYNC_SOURCES.map(function (source) { return { key: source.key }; });
-      if (!props.states || !props.states.known) return null;
-      return h('section', { className: 'cr-sources' },
-        h('div', { className: 'cr-src-head' },
-          h('h2', { className: 'cr-src-title' }, t('sourceListTitle')),
-          h('span', { className: 'cr-src-sub' }, t('sourceListSub'))
-        ),
-        h('div', { className: 'cr-src-body' }, items.map(function (item) {
-          return h(SourceRow, {
-            key: item.key,
-            item: item,
-            t: t,
-            states: props.states,
-            busyKey: props.busyKey,
-            anyBusy: props.busyKey !== null,
-            outcomeKey: props.outcomeKey,
-            outcome: props.outcome,
-            syncBusy: props.syncBusy,
-            onInstall: props.onInstall,
-            onSync: props.onSync
-          });
-        }))
-      );
     }
 
     function EmptyState(props) {
@@ -1710,7 +1882,7 @@ window.__ModuleLoader__.load({
       },
         h('div', { className: 'cr-card-top' },
           h('div', { className: 'cr-ident' },
-            h('div', { className: 'cr-tile' }, initials(entry.service)),
+            h(BrandTile, { service: entry.service, sourceKey: sourceKeyOf(entry) }),
             h('div', { className: 'cr-ident-text' },
               h('div', { className: 'cr-service' }, entry.service),
               h('div', { className: 'cr-account', title: account }, account)
@@ -1736,7 +1908,17 @@ window.__ModuleLoader__.load({
         entry.note ? h('p', { className: 'cr-note' }, entry.note) : null,
         h('div', { className: 'cr-card-foot' },
           h('span', { className: 'cr-origin' }, h('i', { className: 'cr-origin-dot', 'aria-hidden': 'true' }),
-            entry.sourceKey ? t('synced') : t('legacyManual'))
+            entry.sourceKey ? t('synced') : t('legacyManual')),
+          /* The connector's off switch, on one card per service. It is the
+             same switch the Plugins page has; the card disappears and comes
+             back with the connector, and the stored record is never deleted. */
+          props.toggle ? h('button', {
+            type: 'button',
+            className: 'cr-btn cr-btn-ghost cr-src-btn cr-card-switch',
+            onClick: function () { props.toggle.onToggle(props.toggle.key, false); },
+            disabled: props.toggle.busy || props.toggle.anyBusy,
+            title: props.t('sourceDisableHint', { service: entry.service })
+          }, props.toggle.busy ? h(Spinner) : h(IconPower, { size: 12 }), props.t('sourceDisable')) : null
         )
       );
     }
@@ -1799,7 +1981,7 @@ window.__ModuleLoader__.load({
 
       /* The popup belongs to the pill, not to the composer: its bottom edge
          sits 8px above the pill and it grows upward, so the panel reads as
-         something the 额度雷达 button opened in place. */
+         something the 连接中心 button opened in place. */
       const position = React.useCallback(function () {
         const btn = btnRef.current;
         const pop = popRef.current;
@@ -2306,22 +2488,37 @@ window.__ModuleLoader__.load({
         };
       }, [sync.text]);
 
-      /* Install one connector, then re-read the Host so the row flips to its
+      /* Change one connector, then re-read the Host so the row flips to its
          new state without a page reload. A `restart-required` answer is shown
          as such: the bundle is on disk but its Host code is not running yet. */
-      async function installConnector(key) {
+      async function applyChange(kind, key, request) {
         if (installing !== null) return;
         setInstalling(key);
         setInstallOutcome(null);
-        const result = await installSource(key);
+        const result = await request();
         setInstalling(null);
-        setInstallOutcome({ key: key, result: result });
+        /* `kind` is what the success sentence says: an install added a package,
+           an enable only flipped a switch, and the two are not the same news. */
+        setInstallOutcome({ key: key, kind: kind, result: result });
         sourceState = { known: false, map: null };
         sourceStateAt = 0;
         await loadSourceState();
         if (result && result.ok) {
           runSync({ silent: true });
         }
+      }
+
+      function installConnector(key) {
+        return applyChange('install', key, function () { return installSource(key); });
+      }
+
+      /* Installed: this only flips a switch, so it neither downloads anything
+         nor needs the install progress wording. */
+      function enableConnector(key, enabled) {
+        const on = enabled !== false;
+        return applyChange(on ? 'enable' : 'disable', key, function () {
+          return enableSource(key, on);
+        });
       }
 
       async function runSync(options) {
@@ -2401,22 +2598,64 @@ window.__ModuleLoader__.load({
         });
       });
 
+      /* Connectors that contribute no card of their own.
+ 
+         This is what replaced the standalone "supported connectors" list: a
+         connector with nothing to show becomes a card in the same grid, so
+         "not installed" and "installed but off" are stated where the missing
+         credits would have been instead of in a second section above them. */
+      const connectorCards = (function () {
+        if (!sourceInfo || !sourceInfo.known) return [];
+        const contributing = new Set();
+        shown.forEach(function (entry) {
+          const key = sourceKeyOf(entry);
+          if (key !== null) contributing.add(key);
+        });
+        return SYNC_SOURCES.filter(function (source) {
+          return !contributing.has(source.key);
+        }).map(function (source) {
+          return { key: source.key, state: connectorStateOf(sourceInfo, source.key) };
+        });
+      })();
+
+      /* What the grid shows: the filtered account cards, then the connector
+         cards that have nothing to show yet. Connector cards belong to "all"
+         only — every other filter is about credit state, and a connector with
+         no credits cannot match one. A search term still narrows them by
+         service name, so typing "qoder" finds the connector card. */
+      const gridItems = (function () {
+        const items = filtered.map(function (entry) {
+          return {
+            kind: 'entry',
+            entry: entry,
+            toggle: false,
+            key: sourceKeyOf(entry)
+          };
+        });
+        /* Assign the per-service toggle to the first surviving card of a
+           source, so filtering cannot hide the switch entirely. */
+        const seen = new Set();
+        items.forEach(function (item) {
+          const key = item.key;
+          if (key === null) return;
+          const state = connectorStateOf(sourceInfo, key);
+          if (!state.known || !state.available || seen.has(key)) return;
+          seen.add(key);
+          item.toggle = true;
+        });
+        if (filter !== 'all') return items;
+        connectorCards.forEach(function (card) {
+          const info = SOURCE_INFO[card.key] || { service: card.key };
+          if (term !== '' && String(info.service).toLowerCase().indexOf(term) < 0 && card.key.indexOf(term) < 0) return;
+          items.push({ kind: 'connector', key: card.key, state: card.state });
+        });
+        return items;
+      })();
+
       const active = usable.length > 0 ? usable[0] : null;
       const firstDraft = sorted.find(function (entry) { return statusOf(entry) === 'draft'; });
       const firstExpired = sorted.find(function (entry) { return statusOf(entry) === 'expired'; });
       const firstEmpty = sorted.find(function (entry) { return statusOf(entry) === 'empty'; });
-
-      const hiddenNames = (function () {
-        const map = sourceInfo && sourceInfo.map;
-        if (!map) return [];
-        const names = [];
-        map.forEach(function (row, key) {
-          if (!row || row.available === true) return;
-          const label = SOURCE_SERVICE[key];
-          if (label && store.entries.some(function (entry) { return sourceKeyOf(entry) === key; })) names.push(label);
-        });
-        return names;
-      })();
 
       const filters = [
         { id: 'all', label: t('filterAll'), count: counts.all },
@@ -2518,25 +2757,15 @@ window.__ModuleLoader__.load({
             className: 'cr-sync cr-sync-' + (sync.tone || 'ok'),
             role: 'status'
           }, h('i', { className: 'cr-sync-dot', 'aria-hidden': 'true' }), h('span', null, sync.text)) : null,
-          h(SourceList, {
-            t: t,
-            states: sourceInfo,
-            busyKey: installing,
-            outcomeKey: installOutcome ? installOutcome.key : null,
-            outcome: installOutcome ? installOutcome.result : null,
-            syncBusy: sync.busy,
-            onInstall: installConnector,
-            onSync: runSync
-          }),
-          /* Cards from a switched-off connector are hidden, not deleted. Say so
-             once, quietly — otherwise the entries simply vanish with no
-             explanation and the user has to guess where their credits went. */
-          hiddenNames.length > 0
-            ? h('div', { className: 'cr-sync cr-sync-note', role: 'note' },
-                h('span', null, t('hiddenSources', { sources: hiddenNames.join(t('listSep')) }))
-              )
-            : null,
-          shown.length === 0
+          /* A switched-off connector's cards are hidden, not deleted. No note
+             is needed for that any more: the connector's own card in the grid
+             says "已关闭" and carries the 启用 button, so the user sees both the
+             cause and the fix in one place instead of a separate sentence. */
+          /* With no synced entries the page still has something to say: the
+             connector cards in the grid below, each with the action that would
+             fill it in. The full empty state is only for a panel where even
+             that would be blank (no Host answer, nothing stored). */
+          shown.length === 0 && connectorCards.length === 0
             ? h(EmptyState, {
                 t: t,
                 syncBusy: sync.busy,
@@ -2553,7 +2782,7 @@ window.__ModuleLoader__.load({
                   onSync: runSync,
                   syncBusy: sync.busy
                 }),
-                h('section', { className: 'cr-stats' },
+                shown.length > 0 ? h('section', { className: 'cr-stats' },
                   h(Stat, {
                     label: t('statCredits'),
                     value: formatNum(totalCredits),
@@ -2578,8 +2807,8 @@ window.__ModuleLoader__.load({
                     note: draftCount > 0 ? t('statDrafts', { n: draftCount }) : t('statSubsNote'),
                     tone: 'idle'
                   })
-                ),
-                h('div', { className: 'cr-toolbar' },
+                ) : null,
+                shown.length > 0 ? h('div', { className: 'cr-toolbar' },
                   h('div', { className: 'cr-filters', role: 'tablist' }, filters.map(function (item) {
                     return h('button', {
                       key: item.id,
@@ -2602,14 +2831,34 @@ window.__ModuleLoader__.load({
                       })
                     )
                   )
-                ),
-                filtered.length > 0
-                  ? h('div', { className: 'cr-grid' }, filtered.map(function (entry, index) {
+                ) : null,
+                gridItems.length > 0
+                  ? h('div', { className: 'cr-grid' }, gridItems.map(function (item, index) {
+                      if (item.kind === 'connector') {
+                        return h(ConnectorCard, {
+                          key: 'conn:' + item.key,
+                          item: item,
+                          state: item.state,
+                          t: t,
+                          busyKey: installing,
+                          outcomeKey: installOutcome ? installOutcome.key : null,
+                          outcome: installOutcome ? installOutcome.result : null,
+                          outcomeKind: installOutcome ? installOutcome.kind : null,
+                          onInstall: installConnector,
+                          onEnable: enableConnector
+                        });
+                      }
                       return h(SubscriptionCard, {
-                        key: entry.id,
-                        entry: entry,
+                        key: item.entry.id,
+                        entry: item.entry,
                         t: t,
-                        index: index
+                        index: index,
+                        toggle: item.toggle ? {
+                          key: item.key,
+                          busy: installing === item.key,
+                          anyBusy: installing !== null,
+                          onToggle: enableConnector
+                        } : null
                       });
                     }))
                   : h('div', { className: 'cr-empty cr-empty-small' },
@@ -2883,6 +3132,21 @@ window.__ModuleLoader__.load({
   border: 1px solid color-mix(in srgb, var(--cr-brand) 18%, var(--cr-border));
   background: linear-gradient(145deg, color-mix(in srgb, var(--cr-brand) 16%, var(--cr-card2)), color-mix(in srgb, var(--cr-brand) 6%, var(--cr-card2)));
 }
+/* A platform mark keeps its own colour, so it must not pick up the tile's
+   brand tint (or the muted tint a connector card gives a placeholder tile). */
+.cr-tile-brand {
+  padding: 0;
+  overflow: hidden;
+  border-color: color-mix(in srgb, #fff 12%, transparent);
+  background: var(--cr-card2);
+}
+/* The image fills the tile. contain, not cover: the CodeArts mark is not
+   square, and cover would crop it. */
+.cr-tile-img {
+  width: 100%; height: 100%;
+  display: block;
+  object-fit: contain;
+}
 .cr-ident-text { min-width: 0; }
 .cr-service { font-size: 13.5px; font-weight: 650; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cr-account { margin-top: 1px; color: var(--cr-sub); font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 210px; }
@@ -2919,43 +3183,42 @@ window.__ModuleLoader__.load({
 .cr-card-foot { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 9px; border-top: 1px solid var(--cr-border); }
 .cr-origin { display: inline-flex; align-items: center; gap: 5px; color: var(--cr-sub); font-size: 9.5px; opacity: .82; }
 .cr-origin-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--cr-tone); opacity: .8; }
-/* Source list: every known connector, installed or not, in one place. */
-.cr-sources {
-  margin-top: 20px;
-  border: 1px solid var(--cr-border);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--cr-card) 86%, transparent);
-  overflow: hidden;
+/* Connector cards live in the same grid as the credit cards, so "not
+   installed" and "installed but off" are stated where the missing credits
+   would be. There is no separate list section any more. */
+.cr-card-conn {
+  /* A connector with nothing to report reads as a placeholder, not as data:
+     dashed edge, no rise animation, no tone glow. */
+  border-style: dashed;
+  background: color-mix(in srgb, var(--cr-card) 78%, transparent);
+  animation: none;
 }
-.cr-src-head {
-  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
-  padding: 13px 16px 11px;
-  border-bottom: 1px solid var(--cr-border);
+.cr-card-conn:hover {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--cr-tone) 34%, var(--cr-border2));
+  box-shadow: none;
+  transform: none;
 }
-.cr-src-title { margin: 0; font-size: 13px; font-weight: 640; letter-spacing: -.01em; }
-.cr-src-sub { color: var(--cr-sub); font-size: 10.5px; opacity: .8; }
-.cr-src-body { display: flex; flex-direction: column; }
-.cr-src-row {
-  display: flex; align-items: center; gap: 11px;
-  padding: 9px 16px; border-top: 1px solid color-mix(in srgb, var(--cr-border) 55%, transparent);
+/* Only the placeholder tile is muted on a connector card; a real platform mark
+   keeps its brand colour, because that is what makes the row scannable. */
+.cr-card-conn .cr-tile:not(.cr-tile-brand) {
+  color: var(--cr-idle);
+  border-color: var(--cr-border);
+  background: color-mix(in srgb, var(--cr-card2) 90%, transparent);
 }
-.cr-src-row:first-child { border-top: 0; }
-.cr-src-tile { width: 30px; height: 30px; border-radius: 9px; font-size: 11px; }
-.cr-src-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
-.cr-src-name { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 570; min-width: 0; }
-.cr-src-badge {
-  padding: 1px 7px; border-radius: 999px; font-size: 9.5px; font-weight: 560;
-  border: 1px solid var(--cr-border); color: var(--cr-sub); white-space: nowrap;
-}
-.cr-src-badge-ok { color: var(--cr-ok); border-color: color-mix(in srgb, var(--cr-ok) 38%, var(--cr-border)); }
-.cr-src-badge-error { color: var(--cr-error); border-color: color-mix(in srgb, var(--cr-error) 38%, var(--cr-border)); }
-.cr-src-badge-idle { color: var(--cr-idle); }
+.cr-conn-body { display: flex; align-items: flex-start; min-height: 38px; }
+.cr-conn-hint { margin: 0; color: var(--cr-sub); font-size: 11px; line-height: 1.55; }
+.cr-conn-action { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+/* Connector cards carry little text, so the grid's 2-column rhythm would leave
+   them mostly empty; let them shrink to their content and share the row. */
+.cr-grid { align-items: start; }
+.cr-card-switch { margin-left: auto; height: 23px; padding: 0 9px; font-size: 10.5px; }
+.cr-card-switch svg { opacity: .75; }
 .cr-src-repo {
   color: var(--cr-sub); font-size: 10px; opacity: .72; text-decoration: none;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 320px;
 }
 .cr-src-repo:hover { opacity: 1; text-decoration: underline; text-underline-offset: 2px; }
-.cr-src-note { color: var(--cr-sub); font-size: 10.5px; opacity: .8; white-space: nowrap; }
 .cr-src-btn { height: 26px; padding: 0 11px; font-size: 11px; flex: 0 0 auto; }
 .cr-src-outcome { font-size: 10px; line-height: 1.45; margin-top: 1px; }
 .cr-src-outcome-ok { color: var(--cr-ok); }
@@ -3017,17 +3280,17 @@ window.__ModuleLoader__.load({
     function apply(ctx) {
       ctx.effect(function () {
         return ctx.locale.register(NS, { zh: ZH, en: EN });
-      }, 'dsh-credit-radar: locale');
+      }, 'dsh-connect-hub: locale');
 
       ctx.effect(function () {
         const style = document.createElement('style');
-        style.setAttribute('data-dsh-credit-radar', 'pill');
+        style.setAttribute('data-dsh-connect-hub', 'pill');
         style.textContent = PILL_CSS;
         document.head.appendChild(style);
         return function () {
           if (style.parentNode) style.parentNode.removeChild(style);
         };
-      }, 'dsh-credit-radar: pill styles');
+      }, 'dsh-connect-hub: pill styles');
 
       const t = ctx.locale.bind(NS);
       localeT = t;

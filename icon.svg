@@ -5,17 +5,29 @@
       <stop offset=".55" stop-color="#6E5BFF"/>
       <stop offset="1" stop-color="#9A5CFF"/>
     </linearGradient>
-    <linearGradient id="card" x1="16" y1="18" x2="44" y2="46" gradientUnits="userSpaceOnUse">
+    <linearGradient id="hub" x1="26" y1="24" x2="42" y2="42" gradientUnits="userSpaceOnUse">
       <stop stop-color="#FFFFFF"/>
       <stop offset="1" stop-color="#E8EBFF"/>
     </linearGradient>
   </defs>
   <rect width="64" height="64" rx="16" fill="url(#bg)"/>
-  <circle cx="51" cy="13" r="15" fill="#FFFFFF" opacity=".09"/>
-  <rect x="12" y="20" width="33" height="24" rx="6" fill="url(#card)"/>
-  <rect x="12" y="26" width="33" height="4" fill="#7C86FF" opacity=".55"/>
-  <rect x="16.5" y="34" width="8" height="3.2" rx="1.6" fill="#6E5BFF" opacity=".42"/>
-  <circle cx="43" cy="42" r="11.5" fill="#4E5DF5" stroke="#FFFFFF" stroke-width="2.4"/>
-  <circle cx="43" cy="42" r="7.4" fill="none" stroke="#FFFFFF" stroke-width="1.7" opacity=".5"/>
-  <path d="M43 37.4v5.2l3.4 2" fill="none" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="53" cy="11" r="14" fill="#FFFFFF" opacity=".09"/>
+  <!-- Links first, so the nodes sit on top of them like real sockets. -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".55">
+    <path d="M32 32L17 19"/>
+    <path d="M32 32L47 19"/>
+    <path d="M32 32L17 45"/>
+    <path d="M32 32L47 45"/>
+  </g>
+  <!-- The hub the connectors report into. -->
+  <circle cx="32" cy="32" r="10.5" fill="url(#hub)"/>
+  <circle cx="32" cy="32" r="4.2" fill="#5B6CFF"/>
+  <!-- Four platforms around it; two filled, two hollow, so the set reads as
+       growing rather than fixed at four. -->
+  <g stroke="#FFFFFF" stroke-width="2.2">
+    <circle cx="16.5" cy="18.5" r="4.6" fill="#7C86FF"/>
+    <circle cx="47.5" cy="18.5" r="4.6" fill="#7C86FF"/>
+    <circle cx="16.5" cy="45.5" r="4.6" fill="none" opacity=".82"/>
+    <circle cx="47.5" cy="45.5" r="4.6" fill="none" opacity=".82"/>
+  </g>
 </svg>

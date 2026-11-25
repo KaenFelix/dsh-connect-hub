@@ -1,14 +1,15 @@
 {
-  "name": "dsh-credit-radar",
+  "name": "dsh-connect-hub",
   "version": "1.0.0",
   "private": true,
-  "description": "Track subscription credits and expiry dates in one sidebar page, with best-effort sync from installed connector plugins.",
+  "description": "One sidebar page for every DeepSeek Harness connector: see which platforms are installed and switched on, install or toggle them, and read their credit balances and expiry dates side by side.",
   "type": "module",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
     "./locale/*.json": "./locale/*.json",
-    "./icon": "./icon.svg"
+    "./icon": "./icon.svg",
+    "./assets/*": "./lib/assets/*"
   },
   "files": [
     "index.js",
@@ -17,7 +18,8 @@
     "locale/*.json",
     "icon.svg",
     "README.md",
-    "docs/CONNECTORS.md"
+    "docs/CONNECTORS.md",
+    "lib/assets"
   ],
   "dsh": {
     "bundle": {
