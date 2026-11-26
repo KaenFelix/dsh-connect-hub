@@ -2354,10 +2354,15 @@ window.__ModuleLoader__.load({
   max-height: calc(100dvh - 24px);
   width: min(378px, calc(100vw - 24px));
   padding: 12px;
-  border: 1px solid var(--cr-border2);
+  /* Same elevation recipe as the composer's token-usage dialog: no border of
+     its own, and the 0.5px hairline that ships inside --dsw-elevation-prominent
+     is retinted to border-l1. A 1px border-l2 on top of that stroke read as a
+     double edge, a visibly thicker ring than the rest of the product. */
+  border: 0;
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l1, rgba(0,0,0,.06));
   border-radius: var(--dsw-radius-lg, 14px);
   background: var(--dsw-specific-menu, var(--cr-card));
-  box-shadow: var(--dsw-elevation-prominent, 0 22px 60px rgba(0,0,0,.38));
+  box-shadow: var(--dsw-elevation-prominent, 0 0 0 .5px rgba(0,0,0,.06), 0 3px 8px rgba(0,0,0,.04), 0 0 20px rgba(0,0,0,.05));
   backdrop-filter: var(--dsw-menu-backdrop-filter, blur(14px));
   color: var(--cr-text);
   font-family: inherit; font-size: 12.5px; line-height: 1.45;
