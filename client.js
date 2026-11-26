@@ -1504,6 +1504,16 @@ window.__ModuleLoader__.load({
     const SWITCH_ROUTE = '/plugins/dsh-connect-hub/enable';
     let sourceState = { known: false, map: null };
     let sourceStateAt = 0;
+    /* Mounted surfaces that render the Host's connector states. A change made
+       from one surface pushes the new snapshot to all of them, so the page does
+       not keep showing the pre-change row until something else forces a
+       re-render. */
+    const subscribers = new Set();
+    function publishSourceState(next) {
+      subscribers.forEach(function (setState) {
+        setState(next);
+      });
+    }
     const SOURCE_STATE_TTL_MS = 10 * 1000;
 
     function sourceAvailable(key) {
@@ -1546,6 +1556,15 @@ window.__ModuleLoader__.load({
     function useSourceState() {
       const state = React.useState(sourceState);
       const setState = state[1];
+      /* Every mounted surface subscribes here, so a change made from one
+         surface reaches the others. The setter is captured in the ref the
+         change helper calls after an install or a switch. */
+      React.useEffect(function () {
+        subscribers.add(setState);
+        return function () {
+          subscribers.delete(setState);
+        };
+      }, []);
       React.useEffect(function () {
         let alive = true;
         function refresh() {
@@ -1990,8 +2009,10 @@ window.__ModuleLoader__.load({
       const key = props.item.key;
       const info = SOURCE_INFO[key] || { service: key, repo: null };
       const state = props.state;
-      const busy = props.busyKey === key;
-      const anyBusy = props.busyKey !== null && props.busyKey !== undefined;
+      /* Busy is per card: this connector's own change in flight. Another
+         card's install must not disable this one, so there is no shared
+         "something is running" flag here. */
+      const busy = props.busy === true;
       const outcome = props.outcomeKey === key ? props.outcome : null;
       const installed = state.installed;
       const enabled = state.enabled;
@@ -2021,14 +2042,14 @@ window.__ModuleLoader__.load({
           type: 'button',
           className: 'cr-btn cr-btn-primary cr-src-btn',
           onClick: function () { props.onInstall(key); },
-          disabled: busy || anyBusy
+          disabled: busy
         }, busy ? h(Spinner) : h(IconPlus, { size: 13 }), t(busy ? 'sourceInstalling' : 'sourceInstall'));
       } else if (available) {
         action = h('button', {
           type: 'button',
           className: 'cr-btn cr-btn-ghost cr-src-btn',
           onClick: function () { props.onEnable(key, false); },
-          disabled: busy || anyBusy,
+          disabled: busy,
           title: t('sourceDisableHint', { service: info.service })
         }, busy ? h(Spinner) : h(IconPower, { size: 13 }), t('sourceDisable'));
       } else {
@@ -2037,7 +2058,7 @@ window.__ModuleLoader__.load({
           /* On but broken is a retry, not a switch: keep it quiet. */
           className: 'cr-btn cr-src-btn ' + (enabled ? 'cr-btn-ghost' : 'cr-btn-primary'),
           onClick: function () { props.onEnable(key, true); },
-          disabled: busy || anyBusy
+          disabled: busy
         }, busy ? h(Spinner) : h(IconPower, { size: 13 }),
           t(busy ? 'sourceEnabling' : enabled ? 'sourceRetryStart' : 'sourceEnable'));
       }
@@ -2245,7 +2266,7 @@ window.__ModuleLoader__.load({
             type: 'button',
             className: 'cr-btn cr-btn-ghost cr-src-btn cr-card-switch',
             onClick: function () { props.toggle.onToggle(props.toggle.key, false); },
-            disabled: props.toggle.busy || props.toggle.anyBusy,
+            disabled: props.toggle.busy,
             title: props.t('sourceDisableHint', { service: entry.service })
           }, props.toggle.busy ? h(Spinner) : h(IconPower, { size: 12 }), props.t('sourceDisable')) : null
         )
@@ -2772,9 +2793,12 @@ window.__ModuleLoader__.load({
       const [filter, setFilter] = React.useState('all');
       const [query, setQuery] = React.useState('');
       const [sync, setSync] = React.useState({ busy: false, tone: null, text: null });
-      /* Installing a bundle runs pnpm and rewrites the profile: it can take a
-         while and only one may run at a time. */
-      const [installing, setInstalling] = React.useState(null);
+      /* One install per connector, tracked as a set rather than a single key:
+         the Host serializes profile writes on its own file lock, so a second
+         connector can be queued behind the first instead of being blocked
+         here. A card only goes busy for its own key, so installing Trae no
+         longer greys out WorkBuddy's button. */
+      const [installing, setInstalling] = React.useState(function () { return new Set(); });
       const [installOutcome, setInstallOutcome] = React.useState(null);
       const [, tick] = React.useState(0);
       const autoState = useAutoSettings();
@@ -2789,6 +2813,10 @@ window.__ModuleLoader__.load({
       const fileRef = React.useRef(null);
 
       const syncLock = React.useRef(false);
+      /* Keys with a change in flight. The state above drives rendering; this
+         ref is what the click handler reads, because a second click can land
+         before React has re-rendered with the new state. */
+      const busyKeys = React.useRef(new Set());
 
       React.useEffect(function () {
         const id = window.setInterval(function () {
@@ -2841,17 +2869,36 @@ window.__ModuleLoader__.load({
          new state without a page reload. A `restart-required` answer is shown
          as such: the bundle is on disk but its Host code is not running yet. */
       async function applyChange(kind, key, request) {
-        if (installing !== null) return;
-        setInstalling(key);
-        setInstallOutcome(null);
-        const result = await request();
-        setInstalling(null);
+        /* Re-entry guard per key: clicking the same card twice must not start
+           two installs of the same package, while a different card is free to
+           proceed. */
+        if (busyKeys.current.has(key)) return;
+        busyKeys.current.add(key);
+        setInstalling(function (previous) {
+          const next = new Set(previous);
+          next.add(key);
+          return next;
+        });
+        setInstallOutcome(function (previous) {
+          return previous && previous.key === key ? null : previous;
+        });
+        let result;
+        try {
+          result = await request();
+        } finally {
+          busyKeys.current.delete(key);
+          setInstalling(function (previous) {
+            const next = new Set(previous);
+            next.delete(key);
+            return next;
+          });
+        }
         /* `kind` is what the success sentence says: an install added a package,
            an enable only flipped a switch, and the two are not the same news. */
         setInstallOutcome({ key: key, kind: kind, result: result });
         sourceState = { known: false, map: null };
         sourceStateAt = 0;
-        await loadSourceState();
+        publishSourceState(await loadSourceState());
         if (result && result.ok) {
           runSync({ silent: true });
         }
@@ -3279,7 +3326,7 @@ window.__ModuleLoader__.load({
                           item: item,
                           state: item.state,
                           t: t,
-                          busyKey: installing,
+                          busy: installing.has(item.key),
                           outcomeKey: installOutcome ? installOutcome.key : null,
                           outcome: installOutcome ? installOutcome.result : null,
                           outcomeKind: installOutcome ? installOutcome.kind : null,
@@ -3294,8 +3341,7 @@ window.__ModuleLoader__.load({
                         index: index,
                         toggle: item.toggle ? {
                           key: item.key,
-                          busy: installing === item.key,
-                          anyBusy: installing !== null,
+                          busy: installing.has(item.key),
                           onToggle: enableConnector
                         } : null
                       });
