@@ -2885,20 +2885,29 @@ window.__ModuleLoader__.load({
         let result;
         try {
           result = await request();
-        } finally {
-          busyKeys.current.delete(key);
-          setInstalling(function (previous) {
-            const next = new Set(previous);
-            next.delete(key);
-            return next;
-          });
+        } catch (error) {
+          /* A thrown request still has to release the card, and it has no
+             outcome to report; surface it as a failed change. */
+          result = { ok: false, state: 'failed', code: 'operation-error' };
         }
+        /* Re-read the Host BEFORE clearing the busy flag. Clearing it first
+           re-renders the card with its old state, which for a fresh install is
+           "not installed" — the user sees the button flash back to "install"
+           for as long as the re-read takes. Reading first means the card goes
+           from "installing" straight to its new state. */
+        sourceState = { known: false, map: null };
+        sourceStateAt = 0;
+        const fresh = await loadSourceState();
+        busyKeys.current.delete(key);
+        setInstalling(function (previous) {
+          const next = new Set(previous);
+          next.delete(key);
+          return next;
+        });
         /* `kind` is what the success sentence says: an install added a package,
            an enable only flipped a switch, and the two are not the same news. */
         setInstallOutcome({ key: key, kind: kind, result: result });
-        sourceState = { known: false, map: null };
-        sourceStateAt = 0;
-        publishSourceState(await loadSourceState());
+        publishSourceState(fresh);
         if (result && result.ok) {
           runSync({ silent: true });
         }

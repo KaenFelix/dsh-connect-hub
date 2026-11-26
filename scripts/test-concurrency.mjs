@@ -59,26 +59,47 @@ check('no button is disabled by another card\u2019s change', () => {
   ok(offending.length === 0, 'a button is still disabled by anyBusy: ' + offending.join(', '));
 });
 
-check('the per-key guard is released even when the request throws', () => {
-  ok(/try \{\s*result = await request\(\);\s*\} finally \{/.test(source),
-    'the guard is not released in a finally block');
+check('the per-key guard is always released', () => {
   ok(source.includes('busyKeys.current.delete(key);'), 'the key is never removed');
+  const body = source.slice(source.indexOf('async function applyChange'));
+  const fn = body.slice(0, body.indexOf('function installConnector'));
+  const guarded = /\} finally \{/.test(fn) || /\} catch \(error\) \{/.test(fn);
+  ok(guarded, 'a thrown request can leave the card busy forever');
 });
 
 check('a change publishes the new Host state to every mounted surface', () => {
   ok(source.includes('const subscribers = new Set();'), 'no subscriber set');
   ok(source.includes('subscribers.add(setState);'), 'the hook never subscribes');
   ok(source.includes('subscribers.delete(setState);'), 'the hook never unsubscribes');
-  ok(source.includes('publishSourceState(await loadSourceState());'),
-    'a change does not publish the re-read state');
+  ok(/publishSourceState\(/.test(source), 'a change does not publish the re-read state');
 });
 
-check('the published state replaces the cached snapshot', () => {
-  const publish = source.indexOf('publishSourceState(await loadSourceState());');
-  ok(publish !== -1, 'no publish call');
-  const before = source.slice(0, publish);
-  ok(before.lastIndexOf('sourceStateAt = 0;') > before.lastIndexOf('async function applyChange'),
-    'the cache is not invalidated before the re-read');
+check('the cache is invalidated before the re-read', () => {
+  const body = source.slice(source.indexOf('async function applyChange'));
+  const fn = body.slice(0, body.indexOf('function installConnector'));
+  const invalidateAt = fn.indexOf('sourceStateAt = 0;');
+  const readAt = fn.indexOf('await loadSourceState()');
+  ok(invalidateAt !== -1 && readAt !== -1, 'the change does not re-read the Host state');
+  ok(invalidateAt < readAt, 'the stale cache would answer the re-read');
+});
+
+check('the busy flag clears only after the fresh state is in hand', () => {
+  const body = source.slice(source.indexOf('async function applyChange'));
+  const fn = body.slice(0, body.indexOf('function installConnector'));
+  const readAt = fn.indexOf('await loadSourceState()');
+  const clearAt = fn.indexOf('setInstalling(function (previous) {', fn.indexOf('await loadSourceState()') - 2000);
+  ok(readAt !== -1, 'applyChange never re-reads the Host state');
+  const afterRead = fn.slice(readAt);
+  ok(afterRead.includes('busyKeys.current.delete(key);'),
+    'the busy flag is cleared before the state is re-read, so the card flashes back to its old row');
+});
+
+check('a throwing request still releases its card', () => {
+  const body = source.slice(source.indexOf('async function applyChange'));
+  const fn = body.slice(0, body.indexOf('function installConnector'));
+  ok(/try \{\s*result = await request\(\);\s*\} catch/.test(fn),
+    'a thrown request leaves the card busy forever');
+  ok(fn.includes("state: 'failed'"), 'a thrown request has no failure outcome');
 });
 
 console.log('\n\u2713 connector concurrency (' + results.filter((r) => r.indexOf('\u2713') !== -1).length +
