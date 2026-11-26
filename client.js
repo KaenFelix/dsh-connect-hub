@@ -531,10 +531,30 @@ window.__ModuleLoader__.load({
       qoder: 'qoder-dcdea0167b20.png'
     };
 
+    /* How many times a failed mark is re-requested before the tile settles on
+       initials, and how long each wait is. The delays grow because the usual
+       cause is a Host that has not finished bringing this package up yet: the
+       first attempt can land in that window, and later ones must outlast it.
+       A genuinely missing file costs three extra 404s and then nothing. */
+    const BRAND_RETRIES = 3;
+    const BRAND_RETRY_DELAYS = [300, 900, 2000];
+
     /* Document-relative, like every other app-owned route: the reference
-       resolves under any mount point instead of assuming the site root. */
-    function brandAssetUrl(file) {
-      return 'plugins/dsh-connect-hub/assets/brand/' + file;
+       resolves under any mount point instead of assuming the site root.
+
+       Handed to `require.asset` when the Host provides one, so the reference
+       goes through the same resolver first-party plugins use; the Host's
+       default resolver returns it unchanged, so the string is the same either
+       way. Older Hosts have no `asset` member at all — the raw reference is
+       still the correct form there. */
+    function brandAssetUrl(file, attempt) {
+      const reference = 'plugins/dsh-connect-hub/assets/brand/' + file;
+      const resolved = typeof require.asset === 'function' ? require.asset(reference) : reference;
+      /* A retry carries a query the Host ignores (it routes on the pathname
+         alone) so the browser treats it as a different resource: an immutable
+         asset URL that answered 404 is otherwise pinned by its own cache
+         entry, and re-rendering the same `src` never asks again. */
+      return attempt > 0 ? resolved + '?retry=' + attempt : resolved;
     }
 
     /* Which brand a service belongs to. Matched on the names the connectors
@@ -563,18 +583,62 @@ window.__ModuleLoader__.load({
       const key = props.sourceKey && Object.hasOwn(BRAND_ASSETS, props.sourceKey)
         ? props.sourceKey
         : brandKeyOf(props.service);
-      if (key === null) return h('div', { className: 'cr-tile' }, initials(props.service));
+      /* Which attempt is on screen, and whether that attempt has already
+         failed. Kept per tile so one card's failure never re-requests another
+         card's mark. */
+      const [attempt, setAttempt] = React.useState(0);
+      const [broken, setBroken] = React.useState(false);
+      const retryTimer = React.useRef(0);
+      React.useEffect(function () {
+        return function () {
+          if (retryTimer.current) clearTimeout(retryTimer.current);
+          retryTimer.current = 0;
+        };
+      }, []);
+      /* A cold start can ask for the mark before the Host is ready to answer
+         it — the install that put this package here has only just finished —
+         and an image that fails once stays broken: re-rendering the same `src`
+         does not ask again, so the tile would keep showing a broken image for
+         the rest of the session. Each failure schedules one more attempt on a
+         fresh URL, spaced out so the Host has time to settle; running out of
+         attempts settles on initials, which is what a platform with no mark of
+         its own gets anyway. */
+      function onMarkError() {
+        /* One retry in flight at a time: a re-render can fire onError again for
+           the same failed url, and two timers would burn the budget twice as
+           fast. */
+        if (retryTimer.current) return;
+        setBroken(true);
+        if (attempt >= BRAND_RETRIES) return;
+        retryTimer.current = setTimeout(function () {
+          retryTimer.current = 0;
+          setBroken(false);
+          setAttempt(attempt + 1);
+        }, BRAND_RETRY_DELAYS[Math.min(attempt, BRAND_RETRY_DELAYS.length - 1)]);
+      }
+      const label = initials(props.service);
+      /* Out of attempts: drop the image entirely and settle on the same tile
+         an unknown platform gets. */
+      if (key === null || (broken && attempt >= BRAND_RETRIES)) {
+        return h('div', { className: 'cr-tile' }, label);
+      }
+      /* The initials sit under the mark and stay there. A failed image is
+         hidden rather than removed: it has to stay in the tree to be the thing
+         that asks again, but a broken image still paints its own glyph, and
+         that glyph would sit on top of the initials. */
       return h('div', { className: 'cr-tile cr-tile-brand', title: props.service },
+        h('span', { className: 'cr-tile-fallback', 'aria-hidden': 'true' }, label),
         h('img', {
-          className: 'cr-tile-img',
-          src: brandAssetUrl(BRAND_ASSETS[key]),
+          className: broken ? 'cr-tile-img cr-tile-img-off' : 'cr-tile-img',
+          src: brandAssetUrl(BRAND_ASSETS[key], attempt),
           alt: '',
           width: 34,
           height: 34,
           /* Not lazy: the tile sits at the top of a card that is already on
              screen, and these files are 5–33 KB each. */
           decoding: 'async',
-          draggable: 'false'
+          draggable: 'false',
+          onError: onMarkError
         }));
     }
 
@@ -3517,18 +3581,32 @@ window.__ModuleLoader__.load({
 /* A platform mark keeps its own colour, so it must not pick up the tile's
    brand tint (or the muted tint a connector card gives a placeholder tile). */
 .cr-tile-brand {
+  position: relative;
   padding: 0;
   overflow: hidden;
   border-color: color-mix(in srgb, #fff 12%, transparent);
   background: var(--cr-card2);
 }
+/* The initials sit under the mark, in the ordinary tile's type. They are what
+   is left if the image never paints: a broken image still draws its own glyph,
+   so the tile would otherwise show that instead of the platform's letters. */
+.cr-tile-fallback {
+  color: var(--cr-brand);
+  font-size: 11px; font-weight: 760; letter-spacing: .02em;
+}
 /* The image fills the tile. contain, not cover: the CodeArts mark is not
-   square, and cover would crop it. */
+   square, and cover would crop it. It sits on the fallback rather than
+   replacing it, so it must be positioned over it. */
 .cr-tile-img {
+  position: absolute; inset: 0;
   width: 100%; height: 100%;
   display: block;
   object-fit: contain;
 }
+/* A failed image is hidden, not removed: it has to stay mounted to be what
+   retries, but an empty-alt broken image still paints a glyph of its own, and
+   that glyph would cover the initials it is meant to fall back to. */
+.cr-tile-img-off { visibility: hidden; }
 .cr-ident-text { min-width: 0; }
 .cr-service { font-size: 13.5px; font-weight: 650; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cr-account { margin-top: 1px; color: var(--cr-sub); font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 210px; }
