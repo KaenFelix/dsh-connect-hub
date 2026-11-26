@@ -1,6 +1,6 @@
 {
   "name": "dsh-connect-hub",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "One sidebar page for every DeepSeek Harness connector: see which platforms are installed and switched on, install or toggle them, and read their credit balances and expiry dates side by side.",
   "license": "MIT",
   "author": "Felix <kaenfelix@gmail.com>",

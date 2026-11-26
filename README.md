@@ -45,19 +45,18 @@
 
 ## 安装
 
-直接从仓库装（推荐，装的是预构建代码，不需要任何构建授权）：
+从 npm 装（推荐，装的是预构建代码，不需要任何构建授权）：
+
+```sh
+dsh plugin add dsh-connect-hub
+```
+
+不想经过 npm，也可以直接从仓库装，或装本地 tarball：
 
 ```sh
 dsh plugin --profile desktop add github:KaenFelix/dsh-connect-hub
-```
-
-也可以装本地 tarball（离线、或想锁定某一版时用）：
-
-```sh
 dsh plugin add ./dsh-connect-hub-1.0.4.tgz
 ```
-
-本包**尚未发布到 npm**，`dsh plugin add dsh-connect-hub` 会取不到，请用上面两种方式之一。
 
 装完在 **插件** 里确认 `dsh-connect-hub` 已启用。GitHub 方式取的是源码，没有构建步骤可跑，但本包是纯 JavaScript、没有 `build`，所以直接可用。
 
@@ -130,4 +129,4 @@ dsh plugin add ./dsh-connect-hub-1.0.4.tgz
 - 优先级只看到期日，不按积分单价或模型倍率计算；同一天到期时，剩余积分少的排前面，避免浪费。
 - 卡片不可编辑是刻意的：同步会整体覆盖积分、到期日和套餐字段，编辑同步条目下一次同步就会丢失，所以干脆不提供入口。
 - 清除浏览器站点数据会删除本插件里的记录（包括遗留的手动记录）。
-- 包名选 `dsh-connect-hub` 是因为 `dsh-connect` 已被一个飞书/Telegram 桥接插件占用，换个名字免得两边混淆。仓库在 [KaenFelix/dsh-connect-hub](https://github.com/KaenFelix/dsh-connect-hub)（本地目录名仍是旧的 `dsh-credit-radar`），另提供 `dsh-connect-hub-1.0.4.tgz` 作为离线安装包；npm 上还没有同名包。
+- 包名选 `dsh-connect-hub` 是因为 `dsh-connect` 已被一个飞书/Telegram 桥接插件占用，换个名字免得两边混淆。仓库在 [KaenFelix/dsh-connect-hub](https://github.com/KaenFelix/dsh-connect-hub)（本地目录名仍是旧的 `dsh-credit-radar`），已发布在 npm 的 [dsh-connect-hub](https://www.npmjs.com/package/dsh-connect-hub)，也提供 `dsh-connect-hub-1.0.4.tgz` 作为离线安装包。
