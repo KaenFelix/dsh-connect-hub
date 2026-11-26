@@ -120,5 +120,20 @@
   "connInstalledOrigin": "Installed",
   "connAbsentOrigin": "Not installed",
   "connIdleHint": "The connector is ready, but the last sync found no accounts (it may be signed out).",
-  "connIdleOrigin": "Connected"
+  "connIdleOrigin": "Connected",
+  "exportSettings": "Export",
+  "importSettings": "Import",
+  "exportTitle": "Save the subscriptions and auto-refresh setting as a JSON file",
+  "importTitle": "Read subscriptions and auto-refresh setting from a JSON file",
+  "exportDone": "Exported {n} records.",
+  "exportEmpty": "Nothing to export yet; the file will carry the auto-refresh setting only.",
+  "importDone": "Imported {n} records ({added} added, {updated} updated).",
+  "importDoneAuto": "Imported {n} records ({added} added, {updated} updated), and applied the auto-refresh setting.",
+  "importSkipped": "{n} more were incomplete and were skipped.",
+  "importInvalid": "That file is not valid JSON.",
+  "importWrongKind": "That file is not a Connections backup.",
+  "importTooNew": "That file comes from a newer plugin (v{version}); this version cannot read it.",
+  "importEmpty": "That file holds no records.",
+  "importNoValid": "Every record in that file was missing required fields, so nothing was imported.",
+  "importReadFailed": "Could not read that file. Try again."
 }

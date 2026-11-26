@@ -149,6 +149,21 @@ window.__ModuleLoader__.load({
       sourceIncompatible: '{package} 与当前版本的 DeepSeek Harness 不兼容，未安装。',
       sourceNetwork: '安装未完成：网络或超时问题，请稍后重试。',
       sourceInstallFailed: '安装失败：{code}',
+      exportSettings: '导出',
+      importSettings: '导入',
+      exportTitle: '把订阅记录和自动刷新设置存成一个 JSON 文件',
+      importTitle: '从 JSON 文件读取订阅记录和自动刷新设置',
+      exportDone: '已导出 {n} 条记录。',
+      exportEmpty: '还没有记录可导出，文件里只会带上自动刷新设置。',
+      importDone: '已导入 {n} 条（新增 {added}，更新 {updated}）。',
+      importDoneAuto: '已导入 {n} 条（新增 {added}，更新 {updated}），自动刷新设置也已一并应用。',
+      importSkipped: '另有 {n} 条格式不完整，已跳过。',
+      importInvalid: '这个文件不是有效的 JSON。',
+      importWrongKind: '这个文件不是连接中心的设置备份。',
+      importTooNew: '这个文件来自更新版本的插件（v{version}），当前版本读不了。',
+      importEmpty: '文件里没有记录。',
+      importNoValid: '文件里的记录都缺字段，没有一条能导入。',
+      importReadFailed: '读取文件失败，请重试。',
     };
 
     const EN = {
@@ -270,6 +285,21 @@ window.__ModuleLoader__.load({
       sourceIncompatible: '{package} is incompatible with this DeepSeek Harness version and was not installed.',
       sourceNetwork: 'Install did not finish: network or timeout. Try again later.',
       sourceInstallFailed: 'Install failed: {code}',
+      exportSettings: 'Export',
+      importSettings: 'Import',
+      exportTitle: 'Save the subscriptions and auto-refresh setting as a JSON file',
+      importTitle: 'Read subscriptions and auto-refresh setting from a JSON file',
+      exportDone: 'Exported {n} records.',
+      exportEmpty: 'Nothing to export yet; the file will carry the auto-refresh setting only.',
+      importDone: 'Imported {n} records ({added} added, {updated} updated).',
+      importDoneAuto: 'Imported {n} records ({added} added, {updated} updated), and applied the auto-refresh setting.',
+      importSkipped: '{n} more were incomplete and were skipped.',
+      importInvalid: 'That file is not valid JSON.',
+      importWrongKind: 'That file is not a Connections backup.',
+      importTooNew: 'That file comes from a newer plugin (v{version}); this version cannot read it.',
+      importEmpty: 'That file holds no records.',
+      importNoValid: 'Every record in that file was missing required fields, so nothing was imported.',
+      importReadFailed: 'Could not read that file. Try again.',
     };
 
     function pad2(value) {
@@ -878,6 +908,190 @@ window.__ModuleLoader__.load({
           return account === '' && peer.account !== '';
         });
       });
+    }
+
+    /* ---------------------------------------------------------------
+       Settings backup: one JSON file that carries the stored records
+       and the auto-refresh setting, so a fresh browser profile (or a
+       second machine) starts where the last one left off instead of
+       waiting for every connector to answer again.
+
+       Two decisions shape the format:
+
+         - It is the store's own shape, version 1 plus a package marker,
+           so an exported file is also a readable record of what the page
+           holds. Nothing is renamed on the way out.
+         - Nothing secret travels. The store holds credit balances and
+           expiry dates only; connector sign-ins live in each connector's
+           own storage and are never touched here.
+       --------------------------------------------------------------- */
+    const BACKUP_KIND = 'dsh-connect-hub/backup';
+    const BACKUP_VERSION = 1;
+
+    function backupStamp(date) {
+      const d = date || new Date();
+      return String(d.getFullYear()) + pad2(d.getMonth() + 1) + pad2(d.getDate()) +
+        '-' + pad2(d.getHours()) + pad2(d.getMinutes());
+    }
+
+    /* The exported document. Entries are written through normalizeEntry so a
+       record that lost a field in storage is repaired on the way out rather
+       than shipped broken. */
+    function buildBackup(store, auto) {
+      const entries = (store.entries || []).map(normalizeEntry).filter(Boolean);
+      return {
+        kind: BACKUP_KIND,
+        version: BACKUP_VERSION,
+        exportedAt: new Date().toISOString(),
+        auto: {
+          enabled: !!(auto && auto.enabled),
+          intervalMs: normalizeInterval(auto && auto.intervalMs)
+        },
+        entries: entries,
+        lastSyncedAt: typeof store.lastSyncedAt === 'number' ? store.lastSyncedAt : null
+      };
+    }
+
+    function downloadBackup(store, auto) {
+      const payload = buildBackup(store, auto);
+      const text = JSON.stringify(payload, null, 2);
+      const blob = new Blob([text], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'dsh-connect-hub-' + backupStamp() + '.json';
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      /* Revoking on a later task keeps the download alive in Safari, which
+         reads the blob after the click returns. */
+      window.setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+      return { entries: payload.entries.length, auto: payload.auto };
+    }
+
+    /* Read an imported file into entries plus the auto-refresh setting.
+
+       Every failure is a code, not an exception: the caller turns it into a
+       sentence next to the button that started the import. A file is accepted
+       when it is either a full backup (kind marker) or a bare array of
+       records, which is what someone writing a few subscriptions by hand
+       would produce. */
+    function parseBackup(text) {
+      let parsed;
+      try {
+        parsed = JSON.parse(text);
+      } catch (error) {
+        return { ok: false, code: 'invalid-json' };
+      }
+      let list = null;
+      let auto = null;
+      let lastSyncedAt = null;
+      if (Array.isArray(parsed)) {
+        list = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        if (parsed.kind !== undefined && parsed.kind !== BACKUP_KIND) {
+          return { ok: false, code: 'wrong-kind' };
+        }
+        if (typeof parsed.version === 'number' && parsed.version > BACKUP_VERSION) {
+          return { ok: false, code: 'too-new', version: parsed.version };
+        }
+        if (Array.isArray(parsed.entries)) list = parsed.entries;
+        else if (parsed.entries !== undefined) return { ok: false, code: 'invalid-json' };
+        if (parsed.auto && typeof parsed.auto === 'object') {
+          auto = {
+            enabled: parsed.auto.enabled !== false,
+            intervalMs: normalizeInterval(parsed.auto.intervalMs)
+          };
+        }
+        if (typeof parsed.lastSyncedAt === 'number') lastSyncedAt = parsed.lastSyncedAt;
+      }
+      if (list === null) return { ok: false, code: 'invalid-json' };
+      const entries = [];
+      let dropped = 0;
+      list.forEach(function (raw) {
+        const entry = normalizeEntry(raw);
+        if (entry === null) {
+          dropped += 1;
+          return;
+        }
+        entries.push(entry);
+      });
+      if (entries.length === 0) return { ok: false, code: dropped > 0 ? 'no-valid-entries' : 'empty' };
+      return { ok: true, entries: entries, auto: auto, lastSyncedAt: lastSyncedAt, dropped: dropped };
+    }
+
+
+    /* One place that turns a parse failure into the key the UI shows, so a new
+       failure code cannot ship as a blank message. */
+    function backupErrorKey(code) {
+      if (code === 'wrong-kind') return 'importWrongKind';
+      if (code === 'too-new') return 'importTooNew';
+      if (code === 'empty') return 'importEmpty';
+      if (code === 'no-valid-entries') return 'importNoValid';
+      return 'importInvalid';
+    }
+
+    /* The identity two records share when they describe the same account:
+       service name plus account label, both lowercased. Kept beside
+       mergeBackup because it is the only place that decides "same card". */
+    function identOf(entry) {
+      return String(entry && entry.service || '').trim().toLowerCase() +
+        '\u0000' + String(entry && entry.account || '').trim().toLowerCase();
+    }
+
+    /* Merge an imported batch into what is already stored.
+
+       Matching is by source key first and by service plus account second: the
+       same account synced twice must not become two cards, and a record the
+       user retyped by hand should land on the card it describes. Anything
+       unmatched is appended. The newer updatedAt wins on a match, so
+       importing an old file over fresh data cannot roll balances back. */
+    function mergeBackup(entries, incoming, now) {
+      const next = entries.slice();
+      const bySource = new Map();
+      const byIdent = new Map();
+      next.forEach(function (entry, index) {
+        if (entry.sourceKey) bySource.set(entry.sourceKey, index);
+        byIdent.set(identOf(entry), index);
+      });
+      let added = 0;
+      let updated = 0;
+      incoming.forEach(function (item) {
+        const index = item.sourceKey && bySource.has(item.sourceKey)
+          ? bySource.get(item.sourceKey)
+          : byIdent.get(identOf(item));
+        if (index === undefined) {
+          const fresh = Object.assign({}, item, {
+            id: uid(),
+            createdAt: now,
+            updatedAt: now
+          });
+          next.push(fresh);
+          if (fresh.sourceKey) bySource.set(fresh.sourceKey, next.length - 1);
+          byIdent.set(identOf(fresh), next.length - 1);
+          added += 1;
+          return;
+        }
+        const previous = next[index];
+        const previousAt = typeof previous.updatedAt === 'number' ? previous.updatedAt : 0;
+        const incomingAt = typeof item.updatedAt === 'number' ? item.updatedAt : now;
+        if (incomingAt < previousAt) return;
+        next[index] = Object.assign({}, previous, {
+          service: item.service || previous.service,
+          account: item.account || previous.account,
+          plan: item.plan || previous.plan,
+          credits: item.credits === null || item.credits === undefined ? previous.credits : item.credits,
+          total: item.total === null || item.total === undefined ? previous.total : item.total,
+          expiresAt: item.expiresAt || previous.expiresAt,
+          lots: item.lots && item.lots.length > 0 ? item.lots : previous.lots || [],
+          note: item.note || previous.note || '',
+          sourceKey: item.sourceKey || previous.sourceKey,
+          updatedAt: Math.max(previousAt, incomingAt)
+        });
+        updated += 1;
+      });
+      return { entries: next, added: added, updated: updated };
     }
 
     async function getJson(url, timeoutMs) {
@@ -1505,6 +1719,24 @@ window.__ModuleLoader__.load({
         h('path', { key: 'b', d: 'M15.1 3.2v2.9h-2.9' }),
         h('path', { key: 'c', d: 'M15.8 11.8A6 6 0 0 1 5 14.1' }),
         h('path', { key: 'd', d: 'M4.9 16.8v-2.9h2.9' })
+      ]);
+    }
+
+    function IconDownload(props) {
+      return h(Svg, { size: props.size || 16 }, [
+        h('path', { key: 'a', d: 'M10 3.4v8.4' }),
+        h('path', { key: 'b', d: 'M6.2 8.2L10 12l3.8-3.8' }),
+        h('path', { key: 'c', d: 'M4.2 15.4h11.6' })
+      ]);
+    }
+
+    /* Upload is the mirror of the download glyph, so the two read as one
+       pair of actions rather than two unrelated buttons. */
+    function IconUpload(props) {
+      return h(Svg, { size: props.size || 16 }, [
+        h('path', { key: 'a', d: 'M10 12.4V4' }),
+        h('path', { key: 'b', d: 'M6.2 7.8L10 4l3.8 3.8' }),
+        h('path', { key: 'c', d: 'M4.2 15.4h11.6' })
       ]);
     }
 
@@ -2486,6 +2718,11 @@ window.__ModuleLoader__.load({
       const setAuto = autoState[1];
       const [menuOpen, setMenuOpen] = React.useState(false);
       const autoMenuRef = React.useRef(null);
+      /* Import/export feedback is its own line: a finished import is not a
+         sync result, and sharing the sync banner would overwrite whichever of
+         the two the user is still reading. */
+      const [notice, setNotice] = React.useState(null);
+      const fileRef = React.useRef(null);
 
       const syncLock = React.useRef(false);
 
@@ -2525,6 +2762,16 @@ window.__ModuleLoader__.load({
           window.clearTimeout(id);
         };
       }, [sync.text]);
+
+      React.useEffect(function () {
+        if (!notice) return undefined;
+        const id = window.setTimeout(function () {
+          setNotice(null);
+        }, 10000);
+        return function () {
+          window.clearTimeout(id);
+        };
+      }, [notice]);
 
       /* Change one connector, then re-read the Host so the row flips to its
          new state without a page reload. A `restart-required` answer is shown
@@ -2594,6 +2841,54 @@ window.__ModuleLoader__.load({
       function stopAuto() {
         setAuto({ enabled: false, intervalMs: auto.intervalMs });
         setMenuOpen(false);
+      }
+
+      function exportSettings() {
+        const result = downloadBackup(store, auto);
+        setNotice({
+          tone: result.entries > 0 ? 'ok' : 'warn',
+          text: t(result.entries > 0 ? 'exportDone' : 'exportEmpty', { n: result.entries })
+        });
+      }
+
+      /* Reading the file is asynchronous, so the outcome is reported through
+         the same notice line the export uses. The input is cleared afterwards:
+         picking the same file twice must fire a change event both times. */
+      async function importSettings(file) {
+        if (!file) return;
+        let text;
+        try {
+          text = await file.text();
+        } catch (error) {
+          setNotice({ tone: 'error', text: t('importReadFailed') });
+          return;
+        }
+        const backup = parseBackup(text);
+        if (!backup.ok) {
+          setNotice({ tone: 'error', text: t(backupErrorKey(backup.code), { version: backup.version }) });
+          return;
+        }
+        const now = Date.now();
+        /* Read the store through its snapshot rather than the render's copy:
+           an auto refresh may have written between the last render and this
+           click, and merging into a stale list would drop its rows. */
+        const current = storeSnapshot();
+        const merged = mergeBackup(current.entries, backup.entries, now);
+        /* The file's auto-refresh setting is applied before the store write so
+           both surfaces see the new interval in the same tick. */
+        if (backup.auto) setAuto(backup.auto);
+        /* lastSyncedAt stays as it is: an import is not a sync, and moving the
+           stamp forward would tell the auto-refresh timer it has fresh data. */
+        storeWrite({ entries: merged.entries, lastSyncedAt: current.lastSyncedAt });
+        const skipped = backup.dropped > 0 ? ' ' + t('importSkipped', { n: backup.dropped }) : '';
+        setNotice({
+          tone: 'ok',
+          text: t(backup.auto ? 'importDoneAuto' : 'importDone', {
+            n: backup.entries.length,
+            added: merged.added,
+            updated: merged.updated
+          }) + skipped
+        });
       }
 
       const shown = visibleEntries(sourceInfo, store.entries);
@@ -2738,6 +3033,44 @@ window.__ModuleLoader__.load({
                   onClick: runSync,
                   disabled: sync.busy
                 }, sync.busy ? h(Spinner) : h(IconSync, { size: 15 }), t(sync.busy ? 'syncing' : 'sync')),
+                /* Export and import sit after the sync button: syncing is the
+                   action this page exists for, and the two backup buttons are
+                   the occasional errand next to it. */
+                h('button', {
+                  type: 'button',
+                  className: 'cr-btn cr-btn-ghost',
+                  onClick: exportSettings,
+                  title: t('exportTitle')
+                }, h(IconDownload, { size: 15 }), t('exportSettings')),
+                h('button', {
+                  type: 'button',
+                  className: 'cr-btn cr-btn-ghost',
+                  onClick: function () {
+                    if (fileRef.current) fileRef.current.click();
+                  },
+                  title: t('importTitle')
+                }, h(IconUpload, { size: 15 }), t('importSettings')),
+                /* The picker is the native one: a hidden input carries it, and
+                   the Import button above is the control the user sees and
+                   tabs to. A drop zone would add a second way in for a file
+                   that is usually picked from a downloads folder. */
+                h('input', {
+                  ref: fileRef,
+                  type: 'file',
+                  accept: 'application/json,.json',
+                  className: 'cr-visually-hidden',
+                  tabIndex: -1,
+                  'aria-hidden': 'true',
+                  onChange: function (event) {
+                    const input = event.target;
+                    const file = input.files && input.files[0];
+                    /* Clearing the value after the File reference is captured
+                       lets the same file be picked twice in a row: without it
+                       the second pick fires no change event. */
+                    input.value = '';
+                    importSettings(file);
+                  }
+                }),
               ),
               h('div', { className: 'cr-head-meta' },
                 h('div', { className: 'cr-auto-wrap', ref: autoMenuRef },
@@ -2795,6 +3128,10 @@ window.__ModuleLoader__.load({
             className: 'cr-sync cr-sync-' + (sync.tone || 'ok'),
             role: 'status'
           }, h('i', { className: 'cr-sync-dot', 'aria-hidden': 'true' }), h('span', null, sync.text)) : null,
+          notice ? h('div', {
+            className: 'cr-sync cr-sync-' + (notice.tone || 'ok'),
+            role: 'status'
+          }, h('i', { className: 'cr-sync-dot', 'aria-hidden': 'true' }), h('span', null, notice.text)) : null,
           /* A switched-off connector's cards are hidden, not deleted. No note
              is needed for that any more: the connector's own card in the grid
              says "已关闭" and carries the 启用 button, so the user sees both the
@@ -3052,6 +3389,13 @@ window.__ModuleLoader__.load({
   display: inline-block; width: 13px; height: 13px; border-radius: 50%;
   border: 1.6px solid currentColor; border-right-color: transparent;
   animation: cr-rotate .7s linear infinite;
+}
+/* The file picker is opened by the Import button, so the input itself only
+   needs to exist and be reachable from the button: it keeps the native picker
+   (and its keyboard behaviour) without adding a second visible control. */
+.cr-visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }
 .cr-sync {
   display: flex; align-items: flex-start; gap: 8px; margin-top: 14px;

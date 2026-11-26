@@ -2,11 +2,11 @@
 
 连接中心不是「读一遍已安装插件清单、自动发现所有能报积分的东西」。它只认识**一张写死在代码里的来源表**，每个来源对应一个固定的 HTTP 地址和一套固定的返回结构。
 
-- 来源表：`SYNC_SOURCES`（[client.js:1260](../client.js#L1260-L1266)）
-- 每个来源的读取与解析：`syncTrae` / `syncWorkBuddy` / `syncMeoo` / `syncMadao` / `syncQoder`（[client.js:786](../client.js#L786-L1040)）
+- 来源表：`SYNC_SOURCES`（[client.js:1586](../client.js#L1586-L1592)）
+- 每个来源的读取与解析：`syncTrae` / `syncWorkBuddy` / `syncMeoo` / `syncMadao` / `syncQoder`（[client.js:1118](../client.js#L1118-L1428)）
 - 空白页与失败提示的文案也写死了这几个名字（`syncNone` / `syncNoAccounts` / `emptyDesc`，见 [locale/zh.json](../locale/zh.json)）
 
-所以：**新装一个连接器，只要它不在下表里，连接中心就不会去读它**，只能靠「添加订阅」手动录入；手动录入的条目不会被同步刷新，但也不会被清理。
+所以：**新装一个连接器，只要它不在下表里，连接中心就不会去读它**。页面本身没有手工录入入口；要凭空造一条记录，只能自己写一份备份 JSON 再「导入」（见 README 的「导出 / 导入设置」），这样来的条目不会被同步刷新，但也不会被清理。
 
 ## 已支持的五个来源
 
@@ -47,13 +47,13 @@
 Qoder 那次改动就是模板，一共四处（外加下面列出的 Host 开关状态登记）：
 
 1. 写一个 `syncX()`，把接口结果映射成 `{ sourceKey, service, account, plan, credits, total, expiresAt, lots }`；同时在 `index.js` 的 `CONNECTORS` 里加 `{ key: 'x', module: '包名', package: '包名' }`（`module` 是 Loader 行用的 specifier，`package` 是注册表安装用的名字，两者通常相同），并在 `SOURCE_INFO` 里补 `{ service, repo }`——连接器卡片的标题和仓库链接都从这里来——否则开关状态读不到它，会一直当作「未知」而照常探测；
-2. 把 `{ key: 'x', labelKey: 'sourceX', load: syncX }` 加进 `SYNC_SOURCES`（[client.js:1260](../client.js#L1260-L1266)）；
-3. 把服务名加进 `SOURCE_SERVICE`（对话栏胶囊的行名，[client.js:1179](../client.js#L1179)）和 `SOURCE_INFO`（来源列表的服务名与仓库链接，[client.js:1215](../client.js#L1215)）；
+2. 把 `{ key: 'x', labelKey: 'sourceX', load: syncX }` 加进 `SYNC_SOURCES`（[client.js:1586](../client.js#L1586-L1592)）；
+3. 把服务名加进 `SOURCE_SERVICE`（对话栏胶囊的行名，[client.js:1511](../client.js#L1511)）和 `SOURCE_INFO`（来源列表的服务名与仓库链接，[client.js:1541](../client.js#L1541)）；
 4. 在**两处**加 `sourceX` 文案：`client.js` 里的内联 `ZH` / `EN` 块（运行期实际用这两个），以及 `locale/zh.json`、`locale/en.json`（随包资源）。漏掉内联那对会让界面直接显示 key 名。
 
 顺带把 `syncNone` / `emptyDesc`（「没有检测到 … 连接器」和空状态说明）里的服务清单补上新名字——这两条文案是枚举式的，不会自动跟着 `SYNC_SOURCES` 变。
 
-注意 `sourceKey` 是去重与「改名残留」清理的主键（`mergeImported` / `pruneStale`，[client.js:669](../client.js#L669)、[client.js:723](../client.js#L723)），换 key 规则等于换账号身份，会让旧记录被当成幽灵清掉——Trae 早期按账号名建键、后来改按 `accountId`，就踩过这个坑。
+注意 `sourceKey` 是去重与「改名残留」清理的主键（`mergeImported` / `pruneStale`，[client.js:831](../client.js#L831)、[client.js:885](../client.js#L885)），换 key 规则等于换账号身份，会让旧记录被当成幽灵清掉——Trae 早期按账号名建键、后来改按 `accountId`，就踩过这个坑。
 
 ## 开关状态：只同步「装好且开着」的连接器
 
@@ -210,6 +210,8 @@ DSH 里一个连接器可以以两种互不相干的方式「关掉」：
 | 空状态 | 只留「同步连接器」一个动作；文案明确「数据只来自连接器，这里不提供手工录入」 |
 
 `localStorage` 里的旧手动记录会一直保留，想清掉只能清除站点数据；这是刻意不做自动删除——静默移除用户看得见的数据比留一条只读记录更糟。
+
+页面上的「导出 / 导入」不违反这条：它们搬的是**已有的记录**，不提供逐字段编辑，导入走的也是同步用的同一条合并逻辑（按 `sourceKey`、再按服务名+账号匹配，较新的 `updatedAt` 赢），所以导入进来的条目下一次同步照样会被连接器的真实数据覆盖——和以前那张骗人的「编辑」按钮不同，这里没有任何一处声称能改动同步来的字段。
 
 ## 布局：单一列容器
 

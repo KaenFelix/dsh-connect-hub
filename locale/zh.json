@@ -120,5 +120,20 @@
   "connInstalledOrigin": "已安装",
   "connAbsentOrigin": "未安装",
   "connIdleHint": "连接器已就绪，但这次同步没有读到账号（可能还没登录）。",
-  "connIdleOrigin": "已接入"
+  "connIdleOrigin": "已接入",
+  "exportSettings": "导出",
+  "importSettings": "导入",
+  "exportTitle": "把订阅记录和自动刷新设置存成一个 JSON 文件",
+  "importTitle": "从 JSON 文件读取订阅记录和自动刷新设置",
+  "exportDone": "已导出 {n} 条记录。",
+  "exportEmpty": "还没有记录可导出，文件里只会带上自动刷新设置。",
+  "importDone": "已导入 {n} 条（新增 {added}，更新 {updated}）。",
+  "importDoneAuto": "已导入 {n} 条（新增 {added}，更新 {updated}），自动刷新设置也已一并应用。",
+  "importSkipped": "另有 {n} 条格式不完整，已跳过。",
+  "importInvalid": "这个文件不是有效的 JSON。",
+  "importWrongKind": "这个文件不是连接中心的设置备份。",
+  "importTooNew": "这个文件来自更新版本的插件（v{version}），当前版本读不了。",
+  "importEmpty": "文件里没有记录。",
+  "importNoValid": "文件里的记录都缺字段，没有一条能导入。",
+  "importReadFailed": "读取文件失败，请重试。"
 }
