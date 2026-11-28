@@ -28,7 +28,7 @@ const CONNECTORS = [
   { key: 'trae', module: 'dsh-connect-trae', package: 'dsh-connect-trae' },
   { key: 'workbuddy', module: 'dsh-connect-workbuddy', package: 'dsh-connect-workbuddy' },
   { key: 'meoo', module: 'dsh-connect-meoo', package: 'dsh-connect-meoo' },
-  { key: 'madao', module: 'dsh-connect-madao', package: 'dsh-connect-madao' },
+  { key: 'madao', module: '@yzdys/dsh-connect-madao', package: '@yzdys/dsh-connect-madao' },
   { key: 'qoder', module: '@dmh2002/dsh-connect-qoder', package: '@dmh2002/dsh-connect-qoder' }
 ];
 

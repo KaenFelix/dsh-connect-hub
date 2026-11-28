@@ -99,7 +99,7 @@ dsh plugin add ./dsh-connect-hub-1.0.4.tgz
 | Trae | `dsh-connect-trae`（4.18.8） | [dingminhua/dsh-connect-trae](https://github.com/dingminhua/dsh-connect-trae) | `/plugins/dsh-connect-trae/usage` 与 `/account-credits`（**仅 `region=cn`**） |
 | WorkBuddy | `dsh-connect-workbuddy`（5.31.2） | [dingminhua/dsh-connect-workbuddy](https://github.com/dingminhua/dsh-connect-workbuddy) | `/plugins/dsh-connect-workbuddy/account-credits` 与 `/usage`（`cn` + `global`） |
 | Meoo 秒悟 | `dsh-connect-meoo`（0.0.6） | [xinstart-1/dsh-connect-meoo](https://github.com/xinstart-1/dsh-connect-meoo) | `/plugins/dsh-connect-meoo/status` |
-| 华为云码道 | `dsh-connect-madao`（0.9.2） | [XLNC-L/dsh-connect-madao](https://github.com/XLNC-L/dsh-connect-madao) | 本机桥接服务 `http://127.0.0.1:8765/diag/account`（不走 DSH 路由） |
+| 华为云码道 | `@yzdys/dsh-connect-madao`（0.12.0） | [KaenFelix/dsh-connect-madao](https://github.com/KaenFelix/dsh-connect-madao) | 本机桥接服务 `http://127.0.0.1:8765/diag/account`（不走 DSH 路由） |
 | Qoder | `@dmh2002/dsh-connect-qoder`（1.27.1） | [dingminhua/dsh-connect-qoder](https://github.com/dingminhua/dsh-connect-qoder) | `/plugins/dsh-connect-qoder/usage` 与 `/account-credits`（`cn` + `global`） |
 
 几个实现细节：

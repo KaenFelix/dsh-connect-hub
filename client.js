@@ -1625,7 +1625,7 @@ window.__ModuleLoader__.load({
       trae: { service: 'Trae', repo: 'https://github.com/dingminhua/dsh-connect-trae' },
       workbuddy: { service: 'WorkBuddy', repo: 'https://github.com/dingminhua/dsh-connect-workbuddy' },
       meoo: { service: 'Meoo 秒悟', repo: 'https://github.com/xinstart-1/dsh-connect-meoo' },
-      madao: { service: '华为云码道', repo: 'https://github.com/XLNC-L/dsh-connect-madao' },
+      madao: { service: '华为云码道', repo: 'https://github.com/KaenFelix/dsh-connect-madao' },
       qoder: { service: 'Qoder', repo: 'https://github.com/dingminhua/dsh-connect-qoder' }
     };
 
